@@ -2,6 +2,7 @@ package com.scanflow.app
 
 import android.app.Application
 import android.util.Log
+import com.scanflow.app.di.AppContainer
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
 import org.opencv.android.OpenCVLoader
 
@@ -29,11 +30,15 @@ class ScanFlowApplication : Application() {
         } catch (e: Throwable) {
             Log.w(TAG, "OpenCV initialization skipped or deferred: ${e.message}")
         }
+        // Initialize AppContainer
+        container = AppContainer(this)
     }
 
     companion object {
         private const val TAG = "ScanFlowApp"
         lateinit var instance: ScanFlowApplication
+            private set
+        lateinit var container: AppContainer
             private set
     }
 }
