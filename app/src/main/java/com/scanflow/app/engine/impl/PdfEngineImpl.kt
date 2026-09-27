@@ -469,7 +469,7 @@ class PdfEngineImpl : PdfEngine {
                 durationMs = duration,
                 pagesProcessed = pages
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             SafeLogger.e(TAG, ErrorCode.INVALID_PDF, e)
             OperationResult.failure(
                 OperationType.WATERMARK,
@@ -532,7 +532,7 @@ class PdfEngineImpl : PdfEngine {
                 durationMs = duration,
                 pagesProcessed = pages
             )
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             SafeLogger.e(TAG, ErrorCode.INVALID_PDF, e)
             OperationResult.failure(
                 OperationType.PAGE_NUMBERS,

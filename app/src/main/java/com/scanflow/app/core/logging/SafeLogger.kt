@@ -22,23 +22,43 @@ object SafeLogger {
     ) {
         val message = "Feature=$featureId | Op=${operationType.name} | Status=${status.name} | Duration=${durationMs}ms" +
                 if (errorCode != null) " | Error=${errorCode.name}" else ""
-        Log.i(TAG_PREFIX + operationType.category, message)
+        try {
+            Log.i(TAG_PREFIX + operationType.category, message)
+        } catch (_: Throwable) {
+            println("[$TAG_PREFIX${operationType.category}] $message")
+        }
     }
 
     fun d(tag: String, message: String) {
-        Log.d(TAG_PREFIX + tag, sanitize(message))
+        try {
+            Log.d(TAG_PREFIX + tag, sanitize(message))
+        } catch (_: Throwable) {
+            println("[$TAG_PREFIX$tag] ${sanitize(message)}")
+        }
     }
 
     fun i(tag: String, message: String) {
-        Log.i(TAG_PREFIX + tag, sanitize(message))
+        try {
+            Log.i(TAG_PREFIX + tag, sanitize(message))
+        } catch (_: Throwable) {
+            println("[$TAG_PREFIX$tag] ${sanitize(message)}")
+        }
     }
 
     fun w(tag: String, message: String, throwable: Throwable? = null) {
-        Log.w(TAG_PREFIX + tag, sanitize(message), throwable)
+        try {
+            Log.w(TAG_PREFIX + tag, sanitize(message), throwable)
+        } catch (_: Throwable) {
+            println("[$TAG_PREFIX$tag] ${sanitize(message)} ${throwable?.message ?: ""}")
+        }
     }
 
     fun e(tag: String, errorCode: ErrorCode, throwable: Throwable? = null) {
-        Log.e(TAG_PREFIX + tag, "Error: ${errorCode.name} (${errorCode.userMessage})", throwable)
+        try {
+            Log.e(TAG_PREFIX + tag, "Error: ${errorCode.name} (${errorCode.userMessage})", throwable)
+        } catch (_: Throwable) {
+            println("[$TAG_PREFIX$tag] Error: ${errorCode.name} (${errorCode.userMessage}) ${throwable?.message ?: ""}")
+        }
     }
 
     /**
