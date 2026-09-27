@@ -1,5 +1,5 @@
 # ProGuard rules for ScanFlow
--keep class com.tomroush.pdfbox.** { *; }
--dontwarn com.tomroush.pdfbox.**
+-keep class com.tom_roush.pdfbox.** { *; }
+-dontwarn com.tom_roush.pdfbox.**
 -keep class org.opencv.** { *; }
 -dontwarn org.opencv.**
