@@ -56,8 +56,8 @@
 ### Commands
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/ScanFlow.git
-cd ScanFlow
+git clone https://github.com/biputsmk89-a11y/ScanFlow-Toolkit.git
+cd ScanFlow-Toolkit
 
 # 2. Run Unit Tests (26/26 tests)
 ./gradlew testDebugUnitTest
