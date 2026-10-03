@@ -28,7 +28,8 @@ class FormEngineImpl : FormEngine {
         try {
             PDDocument.load(inputFile).use { document ->
                 val acroForm = document.documentCatalog.acroForm ?: return@withContext emptyList()
-                for (field in acroForm.fields) {
+                val allFields = collectFields(acroForm.fields)
+                for (field in allFields) {
                     val type = when (field) {
                         is PDTextField -> FormFieldType.TEXT
                         is PDCheckBox -> FormFieldType.CHECKBOX
@@ -52,6 +53,17 @@ class FormEngineImpl : FormEngine {
             SafeLogger.w(TAG, "Failed to read form fields: ${e.message}")
         }
         result
+    }
+
+    private fun collectFields(fields: Iterable<com.tom_roush.pdfbox.pdmodel.interactive.form.PDField>): List<com.tom_roush.pdfbox.pdmodel.interactive.form.PDField> {
+        val list = mutableListOf<com.tom_roush.pdfbox.pdmodel.interactive.form.PDField>()
+        for (field in fields) {
+            list.add(field)
+            if (field is com.tom_roush.pdfbox.pdmodel.interactive.form.PDNonTerminalField) {
+                list.addAll(collectFields(field.children))
+            }
+        }
+        return list
     }
 
     override suspend fun fillForm(
@@ -126,9 +138,19 @@ class FormEngineImpl : FormEngine {
                         "Document does not contain AcroForm fields."
                     )
 
-                for (field in acroForm.fields) {
+                val allFields = collectFields(acroForm.fields)
+                for (field in allFields) {
                     try {
-                        field.setValue("")
+                        when (field) {
+                            is PDCheckBox -> field.unCheck()
+                            is PDRadioButton -> {
+                                try { field.setValue("Off") } catch (_: Exception) {}
+                            }
+                            is PDTextField -> field.setValue("")
+                            else -> {
+                                try { field.setValue("") } catch (_: Exception) {}
+                            }
+                        }
                     } catch (e: Exception) {
                         // ignore un-settable fields
                     }

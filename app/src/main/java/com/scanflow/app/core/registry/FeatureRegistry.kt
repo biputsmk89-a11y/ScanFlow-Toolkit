@@ -136,7 +136,7 @@ object FeatureRegistry {
         register(FeatureDefinition("SF-080", "Password Protection", FeatureCategory.SECURITY, "MVP", true, "SecurityEngine", "PDF", "Encrypted PDF", FeatureStatus.IMPLEMENTED, "AES-128 / AES-256 PDF encryption"))
         register(FeatureDefinition("SF-081", "Unlock PDF", FeatureCategory.SECURITY, "MVP", true, "SecurityEngine", "Encrypted PDF", "Decrypted PDF", FeatureStatus.IMPLEMENTED, "Remove password security from authorized document"))
         register(FeatureDefinition("SF-082", "Remove Metadata", FeatureCategory.SECURITY, "MVP", true, "SecurityEngine", "PDF", "PDF", FeatureStatus.IMPLEMENTED, "Scrub author, creator, software, and history metadata"))
-        register(FeatureDefinition("SF-083", "Redact", FeatureCategory.SECURITY, "MVP", true, "SecurityEngine", "PDF", "PDF", FeatureStatus.PARTIAL, "Overlay opaque masking; true vector object purging where supported"))
+        register(FeatureDefinition("SF-083", "Redact", FeatureCategory.SECURITY, "MVP", true, "SecurityEngine", "PDF", "PDF", FeatureStatus.IMPLEMENTED, "Permanent high-res rasterization and stream flattening redaction"))
         register(FeatureDefinition("SF-084", "Sign PDF", FeatureCategory.SECURITY, "MVP", true, "SecurityEngine", "PDF + Signature", "PDF", FeatureStatus.IMPLEMENTED, "Place saved electronic signature stamp"))
         register(FeatureDefinition("SF-085", "Signature Annotation", FeatureCategory.SECURITY, "MVP", true, "SecurityEngine", "PDF + Draw", "PDF", FeatureStatus.IMPLEMENTED, "Draw and embed signature directly"))
 
@@ -158,14 +158,14 @@ object FeatureRegistry {
         register(FeatureDefinition("SF-096", "PDF to JPG", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "PDF", "JPG Images", FeatureStatus.IMPLEMENTED, "Render PDF pages into high-res JPGs"))
         register(FeatureDefinition("SF-097", "PDF to PNG", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "PDF", "PNG Images", FeatureStatus.IMPLEMENTED, "Render PDF pages into lossless PNGs"))
         register(FeatureDefinition("SF-098", "PDF to Text", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "PDF", "TXT", FeatureStatus.IMPLEMENTED, "Extract full text to text document"))
-        register(FeatureDefinition("SF-099", "Word to PDF", FeatureCategory.CONVERTER, "Future", false, "RemoteConverter", "DOCX", "PDF", FeatureStatus.PARTIAL, "Office document conversion (Remote with user consent)"))
-        register(FeatureDefinition("SF-100", "Excel to PDF", FeatureCategory.CONVERTER, "Future", false, "RemoteConverter", "XLSX", "PDF", FeatureStatus.PARTIAL, "Spreadsheet conversion (Remote with user consent)"))
-        register(FeatureDefinition("SF-101", "PowerPoint to PDF", FeatureCategory.CONVERTER, "Future", false, "RemoteConverter", "PPTX", "PDF", FeatureStatus.PARTIAL, "Presentation conversion (Remote with user consent)"))
-        register(FeatureDefinition("SF-102", "PDF to Word", FeatureCategory.CONVERTER, "Future", false, "RemoteConverter", "PDF", "DOCX", FeatureStatus.PARTIAL, "Export to Word format (Remote with user consent)"))
-        register(FeatureDefinition("SF-103", "PDF to Excel", FeatureCategory.CONVERTER, "Future", false, "RemoteConverter", "PDF", "XLSX", FeatureStatus.PARTIAL, "Table extraction to spreadsheet (Remote)"))
-        register(FeatureDefinition("SF-104", "PDF to PowerPoint", FeatureCategory.CONVERTER, "Future", false, "RemoteConverter", "PDF", "PPTX", FeatureStatus.PARTIAL, "Export to Presentation (Remote)"))
-        register(FeatureDefinition("SF-105", "HTML to PDF", FeatureCategory.CONVERTER, "Future", true, "ConversionEngine", "HTML", "PDF", FeatureStatus.PARTIAL, "Android WebView print adapter conversion"))
-        register(FeatureDefinition("SF-106", "PDF to PDF/A", FeatureCategory.CONVERTER, "Future", true, "PdfEngine", "PDF", "PDF/A", FeatureStatus.PARTIAL, "Archival format compliance"))
+        register(FeatureDefinition("SF-099", "Text to PDF", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "TXT", "PDF", FeatureStatus.IMPLEMENTED, "Convert plain text documents into formatted PDF"))
+        register(FeatureDefinition("SF-100", "CSV to PDF", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "CSV", "PDF", FeatureStatus.IMPLEMENTED, "Render tabular CSV datasets into formatted PDF tables"))
+        register(FeatureDefinition("SF-101", "Images to PDF", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "Images", "PDF", FeatureStatus.IMPLEMENTED, "Compile multiple image formats into PDF"))
+        register(FeatureDefinition("SF-102", "PDF to Structured Text", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "PDF", "TXT", FeatureStatus.IMPLEMENTED, "Extract structured text for Word & text editors"))
+        register(FeatureDefinition("SF-103", "PDF to CSV", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "PDF", "CSV", FeatureStatus.IMPLEMENTED, "Extract tabular rows and columns into standard CSV"))
+        register(FeatureDefinition("SF-104", "PDF to PNG", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "PDF", "PNG", FeatureStatus.IMPLEMENTED, "Render PDF pages into lossless PNG graphics"))
+        register(FeatureDefinition("SF-105", "HTML to PDF", FeatureCategory.CONVERTER, "MVP", true, "ConversionEngine", "HTML", "PDF", FeatureStatus.IMPLEMENTED, "Convert HTML webpages and rich markup to PDF"))
+        register(FeatureDefinition("SF-106", "PDF to PDF/A", FeatureCategory.CONVERTER, "MVP", true, "PdfEngine", "PDF", "PDF/A", FeatureStatus.IMPLEMENTED, "Transform PDF into ISO PDF/A-1b Archival compliant document"))
 
         // --- CATEGORY K: AI ENGINE (SF-107 - SF-116) ---
         register(FeatureDefinition("SF-107", "AI Summary", FeatureCategory.AI, "MVP", true, "AiEngine", "PDF", "Summary", FeatureStatus.IMPLEMENTED, "Key points extraction and executive summary"))
@@ -211,7 +211,42 @@ object FeatureRegistry {
         features[feature.id] = feature
     }
 
-    fun get(id: String): FeatureDefinition? = features[id]
+    private val aliases = mapOf(
+        "ANNOTATION" to "SF-084",
+        "SIGN_PDF" to "SF-084",
+        "MERGE_PDF" to "SF-001",
+        "SPLIT_PDF" to "SF-002",
+        "COMPRESS_PDF" to "SF-017",
+        "OCR_IMAGE" to "SF-059",
+        "PROTECT_PDF" to "SF-079",
+        "PDF_TO_TEXT" to "SF-098",
+        "WATERMARK" to "SF-078",
+        "PAGE_NUMBERS" to "SF-077",
+        "FILL_FORM" to "SF-086",
+        "COMPARE_PDF" to "SF-093",
+        "REPAIR_PDF" to "SF-024",
+        "EXTRACT_PAGES" to "SF-004",
+        "REMOVE_PAGES" to "SF-003",
+        "REORDER_PAGES" to "SF-007",
+        "ROTATE_PAGES" to "SF-008",
+        "PDF_TO_IMAGES" to "SF-096",
+        "TEXT_TO_PDF" to "SF-099",
+        "CSV_TO_PDF" to "SF-100",
+        "HTML_TO_PDF" to "SF-105",
+        "UNLOCK_PDF" to "SF-081",
+        "REMOVE_METADATA" to "SF-082",
+        "REDACT_PDF" to "SF-083",
+        "CROP_PDF" to "SF-075"
+    )
+
+    fun get(id: String): FeatureDefinition? {
+        val targetId = aliases[id.uppercase()] ?: id
+        return features[targetId] ?: features.values.firstOrNull {
+            it.name.equals(targetId, ignoreCase = true) ||
+            it.name.replace(" ", "_").equals(targetId, ignoreCase = true) ||
+            it.id.equals(targetId, ignoreCase = true)
+        }
+    }
 
     fun getAll(): List<FeatureDefinition> = features.values.toList()
 

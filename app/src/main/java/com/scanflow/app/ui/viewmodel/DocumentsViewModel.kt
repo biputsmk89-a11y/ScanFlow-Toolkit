@@ -23,6 +23,8 @@ enum class DocumentSortOrder {
 
 enum class DocumentFilter {
     ALL,
+    PDF_ONLY,
+    IMAGES_ONLY,
     FAVORITES
 }
 
@@ -51,6 +53,8 @@ class DocumentsViewModel(
     ) { allDocs, currentFilter, currentSort, query ->
         var list = when (currentFilter) {
             DocumentFilter.ALL -> allDocs
+            DocumentFilter.PDF_ONLY -> allDocs.filter { it.mimeType == "application/pdf" }
+            DocumentFilter.IMAGES_ONLY -> allDocs.filter { it.mimeType.startsWith("image/") }
             DocumentFilter.FAVORITES -> allDocs.filter { it.isFavorite }
         }
 

@@ -19,6 +19,7 @@ import androidx.navigation.navArgument
 import com.scanflow.app.ScanFlowApplication
 import com.scanflow.app.domain.model.Document
 import com.scanflow.app.ui.screens.AiChatScreen
+import com.scanflow.app.ui.screens.CompareScreen
 import com.scanflow.app.ui.screens.DocumentViewerScreen
 import com.scanflow.app.ui.screens.DocumentsScreen
 import com.scanflow.app.ui.screens.HomeScreen
@@ -44,9 +45,9 @@ fun ScanFlowNavHost() {
 
     val container = remember { ScanFlowApplication.container }
 
-    val homeViewModel = remember { HomeViewModel(container.documentRepository) }
-    val documentsViewModel = remember { DocumentsViewModel(container.documentRepository) }
-    val toolsViewModel = remember { ToolsViewModel() }
+    val homeViewModel: HomeViewModel = viewModel { HomeViewModel(container.documentRepository) }
+    val documentsViewModel: DocumentsViewModel = viewModel { DocumentsViewModel(container.documentRepository) }
+    val toolsViewModel: ToolsViewModel = viewModel { ToolsViewModel() }
 
     val shareDocument: (Document) -> Unit = { doc ->
         val file = File(doc.path)
@@ -96,6 +97,9 @@ fun ScanFlowNavHost() {
                     onNavigateToTool = { featureId -> navController.navigate(Screen.ToolAction.createRoute(featureId)) },
                     onNavigateToViewer = { docId -> navController.navigate(Screen.Viewer.createRoute(docId)) },
                     onNavigateToAiChat = { docId -> navController.navigate(Screen.AiChat.createRoute(docId)) },
+                    onNavigateToCompare = { navController.navigate(Screen.Compare.route) },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                    onNavigateToDocuments = { navController.navigate(Screen.Documents.route) },
                     onShareDocument = shareDocument
                 )
             }
@@ -104,14 +108,18 @@ fun ScanFlowNavHost() {
                 DocumentsScreen(
                     viewModel = documentsViewModel,
                     onNavigateToViewer = { docId -> navController.navigate(Screen.Viewer.createRoute(docId)) },
-                    onShareDocument = shareDocument
+                    onShareDocument = shareDocument,
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
                 )
             }
 
             composable(Screen.Tools.route) {
                 ToolsScreen(
                     viewModel = toolsViewModel,
-                    onNavigateToTool = { featureId -> navController.navigate(Screen.ToolAction.createRoute(featureId)) }
+                    onNavigateToTool = { featureId -> navController.navigate(Screen.ToolAction.createRoute(featureId)) },
+                    onNavigateToScanner = { navController.navigate(Screen.Scanner.route) },
+                    onNavigateToCompare = { navController.navigate(Screen.Compare.route) },
+                    onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
                 )
             }
 
@@ -119,8 +127,14 @@ fun ScanFlowNavHost() {
                 SettingsScreen()
             }
 
+            composable(Screen.Compare.route) {
+                CompareScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+
             composable(Screen.Scanner.route) {
-                val scannerViewModel = remember { ScannerViewModel(container) }
+                val scannerViewModel: ScannerViewModel = viewModel { ScannerViewModel(container) }
                 ScannerScreen(
                     viewModel = scannerViewModel,
                     onNavigateBack = { navController.popBackStack() },
@@ -136,7 +150,7 @@ fun ScanFlowNavHost() {
                 arguments = listOf(navArgument("docId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val docId = backStackEntry.arguments?.getString("docId") ?: ""
-                val viewerViewModel = remember { ViewerViewModel(container) }
+                val viewerViewModel: ViewerViewModel = viewModel(key = docId) { ViewerViewModel(container) }
                 DocumentViewerScreen(
                     documentId = docId,
                     viewModel = viewerViewModel,
@@ -151,7 +165,7 @@ fun ScanFlowNavHost() {
                 arguments = listOf(navArgument("featureId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val featureId = backStackEntry.arguments?.getString("featureId") ?: ""
-                val toolViewModel = remember { ToolActionViewModel(container) }
+                val toolViewModel: ToolActionViewModel = viewModel(key = featureId) { ToolActionViewModel(container) }
                 ToolActionScreen(
                     featureId = featureId,
                     viewModel = toolViewModel,
@@ -165,7 +179,7 @@ fun ScanFlowNavHost() {
                 arguments = listOf(navArgument("docId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val docId = backStackEntry.arguments?.getString("docId") ?: ""
-                val aiViewModel = remember { AiViewModel(container) }
+                val aiViewModel: AiViewModel = viewModel(key = docId) { AiViewModel(container) }
                 AiChatScreen(
                     documentId = docId,
                     viewModel = aiViewModel,

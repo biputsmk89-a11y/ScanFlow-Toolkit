@@ -42,14 +42,20 @@ class CompressionEngineImpl : CompressionEngine {
 
                 // 1. Strip Metadata if requested
                 if (config.stripMetadata) {
+                    val info = document.documentInformation
+                    info.cosObject.removeItem(COSName.TITLE)
+                    info.cosObject.removeItem(COSName.AUTHOR)
+                    info.cosObject.removeItem(COSName.SUBJECT)
+                    info.cosObject.removeItem(COSName.KEYWORDS)
+                    info.title = null
+                    info.author = null
+                    info.subject = null
+                    info.keywords = null
+                    info.creator = null
+                    info.producer = null
+                    info.creationDate = null
+                    info.modificationDate = null
                     try {
-                        val info = document.documentInformation
-                        info.title = null
-                        info.author = null
-                        info.subject = null
-                        info.keywords = null
-                        info.creator = "ScanFlow"
-                        info.producer = "ScanFlow Document Engine"
                         document.documentCatalog.metadata = null
                     } catch (e: Exception) {
                         SafeLogger.w(TAG, "Metadata stripping notice: ${e.message}")
@@ -151,19 +157,28 @@ class CompressionEngineImpl : CompressionEngine {
                     val targetW = (origWidth / scale).toInt().coerceAtLeast(1)
                     val targetH = (origHeight / scale).toInt().coerceAtLeast(1)
 
-                    val originalBitmap = xObject.image ?: continue
-                    val scaledBitmap = if (scale > 1.0f) {
-                        Bitmap.createScaledBitmap(originalBitmap, targetW, targetH, true)
-                    } else {
-                        originalBitmap
-                    }
+                    val originalBitmap = try { xObject.image } catch (e: Throwable) { null } ?: continue
+                    try {
+                        val scaledBitmap = if (scale > 1.0f) {
+                            try {
+                                Bitmap.createScaledBitmap(originalBitmap, targetW, targetH, true)
+                            } catch (e: Throwable) {
+                                originalBitmap
+                            }
+                        } else {
+                            originalBitmap
+                        }
 
-                    // Compress to JPEG stream
-                    val compressedXObject = JPEGFactory.createFromImage(document, scaledBitmap, quality / 100f)
-                    resources.put(name, compressedXObject)
-
-                    if (scaledBitmap !== originalBitmap) {
-                        scaledBitmap.recycle()
+                        try {
+                            val compressedXObject = JPEGFactory.createFromImage(document, scaledBitmap, quality / 100f)
+                            resources.put(name, compressedXObject)
+                        } finally {
+                            if (scaledBitmap !== originalBitmap) {
+                                scaledBitmap.recycle()
+                            }
+                        }
+                    } finally {
+                        originalBitmap.recycle()
                     }
                 }
             } catch (e: Throwable) {

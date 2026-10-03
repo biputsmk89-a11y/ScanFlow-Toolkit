@@ -35,10 +35,12 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
     }
 
     override suspend fun crop(bitmap: Bitmap, rect: RectF): Bitmap = withContext(Dispatchers.Default) {
-        val left = rect.left.toInt().coerceIn(0, bitmap.width - 1)
-        val top = rect.top.toInt().coerceIn(0, bitmap.height - 1)
-        val width = rect.width().toInt().coerceIn(1, bitmap.width - left)
-        val height = rect.height().toInt().coerceIn(1, bitmap.height - top)
+        val left = minOf(rect.left, rect.right).toInt().coerceIn(0, bitmap.width - 1)
+        val top = minOf(rect.top, rect.bottom).toInt().coerceIn(0, bitmap.height - 1)
+        val right = maxOf(rect.left, rect.right).toInt().coerceIn(left + 1, bitmap.width)
+        val bottom = maxOf(rect.top, rect.bottom).toInt().coerceIn(top + 1, bitmap.height)
+        val width = (right - left).coerceIn(1, bitmap.width - left)
+        val height = (bottom - top).coerceIn(1, bitmap.height - top)
         Bitmap.createBitmap(bitmap, left, top, width, height)
     }
 
@@ -71,19 +73,27 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
     }
 
     override suspend fun toBlackAndWhite(bitmap: Bitmap, threshold: Int): Bitmap = withContext(Dispatchers.Default) {
+        var mat: Mat? = null
+        var grayMat: Mat? = null
+        var bwMat: Mat? = null
         try {
-            // Use OpenCV for fast binarization if available
-            val mat = Mat()
+            // Use OpenCV adaptive Gaussian thresholding for shadow-free crisp document binarization
+            mat = Mat()
             Utils.bitmapToMat(bitmap, mat)
-            val grayMat = Mat()
+            grayMat = Mat()
             Imgproc.cvtColor(mat, grayMat, Imgproc.COLOR_RGBA2GRAY)
-            val bwMat = Mat()
-            Imgproc.threshold(grayMat, bwMat, threshold.toDouble(), 255.0, Imgproc.THRESH_BINARY)
+            bwMat = Mat()
+            Imgproc.adaptiveThreshold(
+                grayMat,
+                bwMat,
+                255.0,
+                Imgproc.ADAPTIVE_THRESH_GAUSSIAN_C,
+                Imgproc.THRESH_BINARY,
+                25,
+                10.0
+            )
             val output = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
             Utils.matToBitmap(bwMat, output)
-            mat.release()
-            grayMat.release()
-            bwMat.release()
             output
         } catch (e: Throwable) {
             // Pure Kotlin fallback if OpenCV native is not ready
@@ -104,6 +114,10 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
             val output = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             output.setPixels(pixels, 0, width, 0, 0, width, height)
             output
+        } finally {
+            mat?.release()
+            grayMat?.release()
+            bwMat?.release()
         }
     }
 
@@ -150,14 +164,17 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
     }
 
     override suspend fun deskew(bitmap: Bitmap): Bitmap = withContext(Dispatchers.Default) {
+        var mat: Mat? = null
+        var gray: Mat? = null
+        var lines: Mat? = null
         try {
-            val mat = Mat()
+            mat = Mat()
             Utils.bitmapToMat(bitmap, mat)
-            val gray = Mat()
+            gray = Mat()
             Imgproc.cvtColor(mat, gray, Imgproc.COLOR_RGBA2GRAY)
             org.opencv.core.Core.bitwise_not(gray, gray)
 
-            val lines = Mat()
+            lines = Mat()
             Imgproc.HoughLinesP(gray, lines, 1.0, Math.PI / 180, 100, 100.0, 10.0)
 
             var totalAngle = 0.0
@@ -171,10 +188,6 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
                 }
             }
 
-            mat.release()
-            gray.release()
-            lines.release()
-
             if (count > 0) {
                 val averageAngle = (totalAngle / count).toFloat()
                 rotate(bitmap, -averageAngle)
@@ -183,6 +196,10 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
             }
         } catch (e: Throwable) {
             bitmap
+        } finally {
+            mat?.release()
+            gray?.release()
+            lines?.release()
         }
     }
 
@@ -190,6 +207,11 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
         withContext(Dispatchers.Default) {
             if (corners.size != 4) return@withContext bitmap
 
+            var srcPoints: MatOfPoint2f? = null
+            var dstPoints: MatOfPoint2f? = null
+            var perspectiveTransform: Mat? = null
+            var srcMat: Mat? = null
+            var dstMat: Mat? = null
             try {
                 val tl = corners[0]
                 val tr = corners[1]
@@ -205,39 +227,44 @@ class ImageProcessingEngineImpl : ImageProcessingEngine {
                 val heightB = sqrt(((tl.x - bl.x) * (tl.x - bl.x) + (tl.y - bl.y) * (tl.y - bl.y)).toDouble())
                 val maxHeight = max(heightA, heightB).toInt().coerceAtLeast(100)
 
-                val srcPoints = MatOfPoint2f(
+                srcPoints = MatOfPoint2f(
                     Point(tl.x.toDouble(), tl.y.toDouble()),
                     Point(tr.x.toDouble(), tr.y.toDouble()),
                     Point(br.x.toDouble(), br.y.toDouble()),
                     Point(bl.x.toDouble(), bl.y.toDouble())
                 )
 
-                val dstPoints = MatOfPoint2f(
+                dstPoints = MatOfPoint2f(
                     Point(0.0, 0.0),
                     Point(maxWidth.toDouble(), 0.0),
                     Point(maxWidth.toDouble(), maxHeight.toDouble()),
                     Point(0.0, maxHeight.toDouble())
                 )
 
-                val perspectiveTransform = Imgproc.getPerspectiveTransform(srcPoints, dstPoints)
-                val srcMat = Mat()
+                perspectiveTransform = Imgproc.getPerspectiveTransform(srcPoints, dstPoints)
+                srcMat = Mat()
                 Utils.bitmapToMat(bitmap, srcMat)
-                val dstMat = Mat()
-                Imgproc.warpPerspective(srcMat, dstMat, perspectiveTransform, Size(maxWidth.toDouble(), maxHeight.toDouble()))
+                dstMat = Mat()
+                Imgproc.warpPerspective(
+                    srcMat,
+                    dstMat,
+                    perspectiveTransform,
+                    Size(maxWidth.toDouble(), maxHeight.toDouble()),
+                    Imgproc.INTER_CUBIC
+                )
 
                 val output = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888)
                 Utils.matToBitmap(dstMat, output)
-
-                srcPoints.release()
-                dstPoints.release()
-                perspectiveTransform.release()
-                srcMat.release()
-                dstMat.release()
-
                 output
             } catch (e: Throwable) {
                 SafeLogger.w(TAG, "Perspective correction failed: ${e.message}")
                 bitmap
+            } finally {
+                srcPoints?.release()
+                dstPoints?.release()
+                perspectiveTransform?.release()
+                srcMat?.release()
+                dstMat?.release()
             }
         }
 

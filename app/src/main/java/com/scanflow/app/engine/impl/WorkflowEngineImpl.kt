@@ -43,72 +43,74 @@ class WorkflowEngineImpl(
             val intermediateFiles = mutableListOf<File>()
             var fileSucceeded = true
 
-            workflow.steps.forEachIndexed { index, step ->
-                onProgress?.invoke(
-                    WorkflowStepProgress(
-                        currentStepIndex = index + 1,
-                        totalSteps = workflow.steps.size,
-                        stepName = step.operationType.displayName
-                    )
-                )
-
-                val stepOutputFile = storageEngine.createTempFile("wf_step_${index + 1}", "pdf")
-                intermediateFiles.add(stepOutputFile)
-
-                val result = when (step.operationType) {
-                    OperationType.COMPRESS_PDF -> {
-                        compressionEngine.compressPdf(currentFile, CompressionConfig(), stepOutputFile)
-                    }
-                    OperationType.WATERMARK -> {
-                        pdfEngine.watermark(currentFile, WatermarkConfig(text = "ScanFlow Workflow"), stepOutputFile)
-                    }
-                    OperationType.PAGE_NUMBERS -> {
-                        pdfEngine.addPageNumbers(currentFile, PageNumberConfig(), stepOutputFile)
-                    }
-                    OperationType.SEARCHABLE_PDF -> {
-                        ocrEngine.generateSearchablePdf(currentFile, stepOutputFile)
-                    }
-                    OperationType.REPAIR_PDF -> {
-                        pdfEngine.repair(currentFile, stepOutputFile)
-                    }
-                    else -> {
-                        OperationResult.failure(
-                            step.operationType,
-                            ErrorCode.UNSUPPORTED_FORMAT,
-                            "Operation not supported inside automated chain."
+            try {
+                workflow.steps.forEachIndexed { index, step ->
+                    onProgress?.invoke(
+                        WorkflowStepProgress(
+                            currentStepIndex = index + 1,
+                            totalSteps = workflow.steps.size,
+                            stepName = step.operationType.displayName
                         )
+                    )
+
+                    val stepOutputFile = storageEngine.createTempFile("wf_step_${index + 1}", "pdf")
+                    intermediateFiles.add(stepOutputFile)
+
+                    val result = when (step.operationType) {
+                        OperationType.COMPRESS_PDF -> {
+                            compressionEngine.compressPdf(currentFile, CompressionConfig(), stepOutputFile)
+                        }
+                        OperationType.WATERMARK -> {
+                            pdfEngine.watermark(currentFile, WatermarkConfig(text = "ScanFlow Workflow"), stepOutputFile)
+                        }
+                        OperationType.PAGE_NUMBERS -> {
+                            pdfEngine.addPageNumbers(currentFile, PageNumberConfig(), stepOutputFile)
+                        }
+                        OperationType.SEARCHABLE_PDF -> {
+                            ocrEngine.generateSearchablePdf(currentFile, stepOutputFile)
+                        }
+                        OperationType.REPAIR_PDF -> {
+                            pdfEngine.repair(currentFile, stepOutputFile)
+                        }
+                        else -> {
+                            OperationResult.failure(
+                                step.operationType,
+                                ErrorCode.UNSUPPORTED_FORMAT,
+                                "Operation not supported inside automated chain."
+                            )
+                        }
+                    }
+
+                    if (result.success && stepOutputFile.exists() && stepOutputFile.length() > 0L) {
+                        currentFile = stepOutputFile
+                    } else {
+                        fileSucceeded = false
+                        overallResults.add(result)
+                        return@forEachIndexed
                     }
                 }
 
-                if (result.success && stepOutputFile.exists() && stepOutputFile.length() > 0L) {
-                    currentFile = stepOutputFile
-                } else {
-                    fileSucceeded = false
-                    overallResults.add(result)
-                    return@forEachIndexed
-                }
-            }
+                if (fileSucceeded) {
+                    // Move final processed file to target output directory
+                    val finalName = "${inputFile.nameWithoutExtension}_workflow_out.pdf"
+                    val finalFile = File(outputDirectory, finalName)
+                    currentFile.copyTo(finalFile, overwrite = true)
 
-            if (fileSucceeded) {
-                // Move final processed file to target output directory
-                val finalName = "${inputFile.nameWithoutExtension}_workflow_out.pdf"
-                val finalFile = File(outputDirectory, finalName)
-                currentFile.copyTo(finalFile, overwrite = true)
-
-                overallResults.add(
-                    OperationResult.success(
-                        operationType = OperationType.EXECUTE_WORKFLOW,
-                        outputPath = finalFile.absolutePath,
-                        outputSize = finalFile.length(),
-                        durationMs = 0L,
-                        pagesProcessed = 1
+                    overallResults.add(
+                        OperationResult.success(
+                            operationType = OperationType.EXECUTE_WORKFLOW,
+                            outputPath = finalFile.absolutePath,
+                            outputSize = finalFile.length(),
+                            durationMs = 0L,
+                            pagesProcessed = 1
+                        )
                     )
-                )
-            }
-
-            // Cleanup intermediate files
-            intermediateFiles.forEach { tempFile ->
-                if (tempFile.exists()) tempFile.delete()
+                }
+            } finally {
+                // Cleanup intermediate files safely
+                intermediateFiles.forEach { tempFile ->
+                    if (tempFile.exists()) tempFile.delete()
+                }
             }
         }
 

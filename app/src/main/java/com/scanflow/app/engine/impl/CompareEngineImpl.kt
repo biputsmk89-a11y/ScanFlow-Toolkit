@@ -30,69 +30,98 @@ class CompareEngineImpl(
         generateDiffImages: Boolean,
         onProgress: ((current: Int, total: Int) -> Unit)?
     ): ComparisonReport = withContext(Dispatchers.IO) {
+        var pfdA: android.os.ParcelFileDescriptor? = null
+        var pfdB: android.os.ParcelFileDescriptor? = null
+        var rendererA: android.graphics.pdf.PdfRenderer? = null
+        var rendererB: android.graphics.pdf.PdfRenderer? = null
         var pageCountA = 0
         var pageCountB = 0
 
-        // Get page counts
-        if (pdfRendererEngine.open(fileA)) {
-            pageCountA = pdfRendererEngine.getPageCount()
-            pdfRendererEngine.close()
-        }
-        if (pdfRendererEngine.open(fileB)) {
-            pageCountB = pdfRendererEngine.getPageCount()
-            pdfRendererEngine.close()
-        }
-
-        val totalPagesToCompare = max(pageCountA, pageCountB)
         val pageResults = mutableListOf<PageComparisonResult>()
         var totalDiffAccumulator = 0f
 
-        for (pageIndex in 0 until totalPagesToCompare) {
-            var bitmapA: Bitmap? = null
-            var bitmapB: Bitmap? = null
-
-            if (pageIndex < pageCountA) {
-                if (pdfRendererEngine.open(fileA)) {
-                    bitmapA = pdfRendererEngine.renderPage(pageIndex, COMPARE_WIDTH, COMPARE_HEIGHT)
-                    pdfRendererEngine.close()
-                }
+        try {
+            if (fileA.exists() && fileA.length() > 0L) {
+                pfdA = android.os.ParcelFileDescriptor.open(fileA, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                rendererA = android.graphics.pdf.PdfRenderer(pfdA)
+                pageCountA = rendererA.pageCount
+            }
+            if (fileB.exists() && fileB.length() > 0L) {
+                pfdB = android.os.ParcelFileDescriptor.open(fileB, android.os.ParcelFileDescriptor.MODE_READ_ONLY)
+                rendererB = android.graphics.pdf.PdfRenderer(pfdB)
+                pageCountB = rendererB.pageCount
             }
 
-            if (pageIndex < pageCountB) {
-                if (pdfRendererEngine.open(fileB)) {
-                    bitmapB = pdfRendererEngine.renderPage(pageIndex, COMPARE_WIDTH, COMPARE_HEIGHT)
-                    pdfRendererEngine.close()
-                }
-            }
+            val totalPagesToCompare = max(pageCountA, pageCountB)
 
-            val pageDiff = compareBitmaps(bitmapA, bitmapB, generateDiffImages)
-            pageResults.add(
-                PageComparisonResult(
-                    pageNumber = pageIndex + 1,
-                    differencePercentage = pageDiff.first,
-                    diffBitmap = pageDiff.second
+            for (pageIndex in 0 until totalPagesToCompare) {
+                var bitmapA: Bitmap? = null
+                var bitmapB: Bitmap? = null
+
+                if (pageIndex < pageCountA && rendererA != null) {
+                    var page: android.graphics.pdf.PdfRenderer.Page? = null
+                    try {
+                        page = rendererA.openPage(pageIndex)
+                        val bmp = Bitmap.createBitmap(COMPARE_WIDTH, COMPARE_HEIGHT, Bitmap.Config.ARGB_8888)
+                        bmp.eraseColor(Color.WHITE)
+                        page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bitmapA = bmp
+                    } catch (e: Throwable) {
+                        SafeLogger.w(TAG, "Failed to render page $pageIndex of doc A: ${e.message}")
+                    } finally {
+                        page?.close()
+                    }
+                }
+
+                if (pageIndex < pageCountB && rendererB != null) {
+                    var page: android.graphics.pdf.PdfRenderer.Page? = null
+                    try {
+                        page = rendererB.openPage(pageIndex)
+                        val bmp = Bitmap.createBitmap(COMPARE_WIDTH, COMPARE_HEIGHT, Bitmap.Config.ARGB_8888)
+                        bmp.eraseColor(Color.WHITE)
+                        page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        bitmapB = bmp
+                    } catch (e: Throwable) {
+                        SafeLogger.w(TAG, "Failed to render page $pageIndex of doc B: ${e.message}")
+                    } finally {
+                        page?.close()
+                    }
+                }
+
+                val pageDiff = compareBitmaps(bitmapA, bitmapB, generateDiffImages)
+                pageResults.add(
+                    PageComparisonResult(
+                        pageNumber = pageIndex + 1,
+                        differencePercentage = pageDiff.first,
+                        diffBitmap = pageDiff.second
+                    )
                 )
+                totalDiffAccumulator += pageDiff.first
+
+                bitmapA?.recycle()
+                bitmapB?.recycle()
+
+                onProgress?.invoke(pageIndex + 1, totalPagesToCompare)
+            }
+
+            val overallSimilarity = if (totalPagesToCompare > 0) {
+                (100f - (totalDiffAccumulator / totalPagesToCompare * 100f)).coerceIn(0f, 100f)
+            } else 100f
+
+            ComparisonReport(
+                fileA = fileA,
+                fileB = fileB,
+                pageCountA = pageCountA,
+                pageCountB = pageCountB,
+                pageResults = pageResults,
+                overallSimilarityPercentage = overallSimilarity
             )
-            totalDiffAccumulator += pageDiff.first
-
-            bitmapA?.recycle()
-            bitmapB?.recycle()
-
-            onProgress?.invoke(pageIndex + 1, totalPagesToCompare)
+        } finally {
+            try { rendererA?.close() } catch (_: Throwable) {}
+            try { pfdA?.close() } catch (_: Throwable) {}
+            try { rendererB?.close() } catch (_: Throwable) {}
+            try { pfdB?.close() } catch (_: Throwable) {}
         }
-
-        val overallSimilarity = if (totalPagesToCompare > 0) {
-            (100f - (totalDiffAccumulator / totalPagesToCompare * 100f)).coerceIn(0f, 100f)
-        } else 100f
-
-        ComparisonReport(
-            fileA = fileA,
-            fileB = fileB,
-            pageCountA = pageCountA,
-            pageCountB = pageCountB,
-            pageResults = pageResults,
-            overallSimilarityPercentage = overallSimilarity
-        )
     }
 
     private fun compareBitmaps(

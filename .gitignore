@@ -9,3 +9,19 @@ build/
 captures/
 .externalNativeBuild/
 .cxx/
+.kotlin/
+
+# Temporary / OS
+*.log
+*.tmp
+
+# Release Keystores & Signing Secrets
+*.jks
+*.keystore
+
+# Android Binaries (GitHub file limit is 100MB; use GitHub Releases for distribution)
+*.apk
+*.aab
+ScanFlow-*.apk
+ScanFlow-*.aab
+release/

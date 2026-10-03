@@ -47,6 +47,10 @@ import com.scanflow.app.engine.impl.WorkflowEngineImpl
 
 class AppContainer(val context: Context) {
 
+    val themePreferences: com.scanflow.app.core.theme.ThemePreferences by lazy {
+        com.scanflow.app.core.theme.ThemePreferences(context)
+    }
+
     val database: ScanFlowDatabase by lazy {
         ScanFlowDatabase.getInstance(context)
     }
@@ -82,7 +86,7 @@ class AppContainer(val context: Context) {
     }
 
     val scannerEngine: ScannerEngine by lazy {
-        ScannerEngineImpl(imageProcessingEngine)
+        ScannerEngineImpl(imageProcessingEngine, ocrEngine)
     }
 
     val compressionEngine: CompressionEngine by lazy {
@@ -114,7 +118,7 @@ class AppContainer(val context: Context) {
     }
 
     val aiEngine: AiEngine by lazy {
-        AiEngineImpl()
+        AiEngineImpl(ocrEngine)
     }
 
     // Use Cases

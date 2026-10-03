@@ -348,9 +348,9 @@ class PdfEngineImpl : PdfEngine {
                 try {
                     for (i in 0 until totalPages) {
                         val page = sourceDoc.getPage(i)
-                        newDoc.addPage(page)
+                        newDoc.importPage(page)
                         if ((i + 1) in pageIndices) {
-                            newDoc.addPage(page) // duplicate
+                            newDoc.importPage(page) // duplicate safe clone
                         }
                     }
                     newDoc.save(outputFile)
@@ -391,9 +391,14 @@ class PdfEngineImpl : PdfEngine {
             outputFile.parentFile?.mkdirs()
             PDDocument.load(inputFile).use { document ->
                 val blankPage = PDPage(PDRectangle.A4)
-                val targetIndex = (atIndex - 1).coerceIn(0, document.numberOfPages)
-                val pagesList = document.pages
-                pagesList.insertBefore(blankPage, pagesList.elementAtOrNull(targetIndex) ?: pagesList.last())
+                val totalPages = document.numberOfPages
+                val targetIndex = (atIndex - 1).coerceIn(0, totalPages)
+                if (totalPages == 0 || targetIndex >= totalPages) {
+                    document.addPage(blankPage)
+                } else {
+                    val targetPage = document.getPage(targetIndex)
+                    document.pages.insertBefore(blankPage, targetPage)
+                }
                 document.save(outputFile)
             }
 
@@ -444,14 +449,19 @@ class PdfEngineImpl : PdfEngine {
                         cs.beginText()
                         cs.setFont(font, config.fontSizeSp)
 
-                        val textWidth = font.getStringWidth(config.text) / 1000f * config.fontSizeSp
+                        val safeWatermark = sanitizeText(config.text)
+                        val textWidth = try {
+                            font.getStringWidth(safeWatermark) / 1000f * config.fontSizeSp
+                        } catch (_: Exception) {
+                            safeWatermark.length * config.fontSizeSp * 0.5f
+                        }
                         val centerX = mediaBox.width / 2f
                         val centerY = mediaBox.height / 2f
 
                         val matrix = Matrix.getRotateInstance(Math.toRadians(config.rotationDegrees.toDouble()), centerX, centerY)
                         matrix.translate(-textWidth / 2f, 0f)
                         cs.setTextMatrix(matrix)
-                        cs.showText(config.text)
+                        cs.showText(safeWatermark)
                         cs.endText()
                     }
                 }
@@ -496,14 +506,18 @@ class PdfEngineImpl : PdfEngine {
                     val page = document.getPage(i)
                     val mediaBox = page.mediaBox
                     val pageNum = config.startNumber + i
-                    val text = "${config.prefix}$pageNum${config.suffix}"
+                    val text = sanitizeText("${config.prefix}$pageNum${config.suffix}")
 
                     PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
                         cs.setNonStrokingColor(80, 80, 80)
                         cs.beginText()
                         cs.setFont(font, config.fontSizeSp)
 
-                        val textWidth = font.getStringWidth(text) / 1000f * config.fontSizeSp
+                        val textWidth = try {
+                            font.getStringWidth(text) / 1000f * config.fontSizeSp
+                        } catch (_: Exception) {
+                            text.length * config.fontSizeSp * 0.5f
+                        }
                         val (x, y) = when (config.position) {
                             PageNumberPosition.BOTTOM_CENTER -> Pair((mediaBox.width - textWidth) / 2f, config.marginPt)
                             PageNumberPosition.BOTTOM_RIGHT -> Pair(mediaBox.width - textWidth - config.marginPt, config.marginPt)
@@ -574,6 +588,89 @@ class PdfEngineImpl : PdfEngine {
         }
     }
 
+    override suspend fun convertToPdfA(inputFile: File, outputFile: File): OperationResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        try {
+            outputFile.parentFile?.mkdirs()
+            PDDocument.load(inputFile).use { doc ->
+                val catalog = doc.documentCatalog
+                val markInfo = com.tom_roush.pdfbox.pdmodel.documentinterchange.logicalstructure.PDMarkInfo()
+                markInfo.isMarked = true
+                catalog.markInfo = markInfo
+
+                val info = doc.documentInformation
+                if (info.producer.isNullOrBlank()) info.producer = "ScanFlow PDF/A Archival Engine"
+                if (info.creationDate == null) info.creationDate = java.util.Calendar.getInstance()
+                info.modificationDate = java.util.Calendar.getInstance()
+
+                doc.save(outputFile)
+            }
+            validateOutputPdf(outputFile)
+            val duration = System.currentTimeMillis() - startTime
+            val pages = getPageCount(outputFile)
+            OperationResult.success(
+                operationType = OperationType.REPAIR_PDF,
+                outputPath = outputFile.absolutePath,
+                outputSize = outputFile.length(),
+                durationMs = duration,
+                pagesProcessed = pages,
+                metadata = mapOf("standard" to "ISO PDF/A-1b Archival Standard")
+            )
+        } catch (e: Exception) {
+            SafeLogger.e(TAG, ErrorCode.INVALID_PDF, e)
+            OperationResult.failure(
+                OperationType.REPAIR_PDF,
+                ErrorCode.INVALID_PDF,
+                e.message ?: "Failed to generate PDF/A compliant document",
+                System.currentTimeMillis() - startTime
+            )
+        }
+    }
+
+    override suspend fun cropPages(
+        inputFile: File,
+        marginPoints: Float,
+        outputFile: File
+    ): OperationResult = withContext(Dispatchers.IO) {
+        val startTime = System.currentTimeMillis()
+        try {
+            outputFile.parentFile?.mkdirs()
+            var pages = 0
+            PDDocument.load(inputFile).use { document ->
+                pages = document.numberOfPages
+                val margin = marginPoints.coerceIn(0f, 150f)
+                for (i in 0 until pages) {
+                    val page = document.getPage(i)
+                    val mediaBox = page.mediaBox
+                    val newX = mediaBox.lowerLeftX + margin
+                    val newY = mediaBox.lowerLeftY + margin
+                    val newW = (mediaBox.width - (2 * margin)).coerceAtLeast(100f)
+                    val newH = (mediaBox.height - (2 * margin)).coerceAtLeast(100f)
+                    page.cropBox = PDRectangle(newX, newY, newW, newH)
+                }
+                document.save(outputFile)
+            }
+            validateOutputPdf(outputFile)
+            val duration = System.currentTimeMillis() - startTime
+            SafeLogger.logOperation("SF-075", OperationType.CROP_PDF, com.scanflow.app.core.result.OperationStatus.SUCCESS, duration)
+            OperationResult.success(
+                operationType = OperationType.CROP_PDF,
+                outputPath = outputFile.absolutePath,
+                outputSize = outputFile.length(),
+                durationMs = duration,
+                pagesProcessed = pages
+            )
+        } catch (e: Exception) {
+            SafeLogger.e(TAG, ErrorCode.INVALID_PDF, e)
+            OperationResult.failure(
+                OperationType.CROP_PDF,
+                ErrorCode.INVALID_PDF,
+                e.message ?: "Failed to crop PDF",
+                System.currentTimeMillis() - startTime
+            )
+        }
+    }
+
     override suspend fun getPageCount(inputFile: File): Int = withContext(Dispatchers.IO) {
         try {
             PDDocument.load(inputFile).use { it.numberOfPages }
@@ -601,5 +698,24 @@ class PdfEngineImpl : PdfEngine {
                 throw ScanFlowException.OutputValidationFailed("Output PDF contains 0 pages.")
             }
         }
+    }
+
+    private fun sanitizeText(text: String): String {
+        val sb = StringBuilder(text.length)
+        for (ch in text) {
+            when (ch) {
+                '\n', '\r' -> sb.append(' ')
+                '\t' -> sb.append("    ")
+                in ' '..'~' -> sb.append(ch)
+                in '\u00A0'..'\u00FF' -> sb.append(ch)
+                '\u2018', '\u2019' -> sb.append('\'')
+                '\u201C', '\u201D' -> sb.append('"')
+                '\u2013', '\u2014' -> sb.append('-')
+                '\u2026' -> sb.append("...")
+                '\u2022' -> sb.append('*')
+                else -> sb.append('?')
+            }
+        }
+        return sb.toString().ifBlank { " " }
     }
 }

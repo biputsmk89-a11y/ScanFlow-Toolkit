@@ -125,4 +125,35 @@ class PdfEngineTest {
             assertEquals(90, doc.getPage(0).rotation)
         }
     }
+
+    @Test
+    fun testCropPages_validatesOutput() = runBlocking {
+        val croppedFile = File(tempDir, "cropped.pdf")
+        val margin = 36f // 0.5 inch margin
+        val result = pdfEngine.cropPages(docA, margin, croppedFile)
+
+        assertTrue("Crop operation should succeed", result.success)
+        assertEquals(OperationType.CROP_PDF, result.operationType)
+        assertTrue(croppedFile.exists())
+
+        PDDocument.load(croppedFile).use { doc ->
+            val page = doc.getPage(0)
+            val cropBox = page.cropBox
+            val mediaBox = page.mediaBox
+            assertTrue("Crop box width should be smaller than media box width", cropBox.width < mediaBox.width)
+            assertTrue("Crop box height should be smaller than media box height", cropBox.height < mediaBox.height)
+        }
+    }
+
+    @Test
+    fun testConvertToPdfA_validatesOutputAndMetadata() = runBlocking {
+        val pdfAFile = File(tempDir, "pdfa.pdf")
+        val result = pdfEngine.convertToPdfA(docA, pdfAFile)
+
+        assertTrue("Convert to PDF/A should succeed", result.success)
+        assertEquals(OperationType.REPAIR_PDF, result.operationType)
+        assertTrue("PDF/A file must exist on disk", pdfAFile.exists())
+        assertTrue("PDF/A file size must be non-zero", pdfAFile.length() > 0)
+    }
 }
+

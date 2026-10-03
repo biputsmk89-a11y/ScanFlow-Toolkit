@@ -48,7 +48,7 @@ class PdfRendererEngineImpl : PdfRendererEngine {
         }
     }
 
-    override suspend fun renderPage(pageIndex: Int, targetWidth: Int, targetHeight: Int): Bitmap? =
+    override suspend fun renderPage(pageIndex: Int, targetWidth: Int, targetHeight: Int, renderMode: Int): Bitmap? =
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 val renderer = currentRenderer ?: return@withContext null
@@ -57,14 +57,39 @@ class PdfRendererEngineImpl : PdfRendererEngine {
                 var page: PdfRenderer.Page? = null
                 try {
                     page = renderer.openPage(pageIndex)
-                    val width = if (targetWidth > 0) targetWidth else page.width
-                    val height = if (targetHeight > 0) targetHeight else page.height
+                    val pageAspect = page.width.toFloat() / page.height.toFloat()
+                    val (width, height) = when {
+                        targetWidth > 0 && targetHeight > 0 -> {
+                            val targetAspect = targetWidth.toFloat() / targetHeight.toFloat()
+                            if (pageAspect > targetAspect) {
+                                val h = (targetWidth / pageAspect).toInt().coerceAtLeast(1)
+                                Pair(targetWidth, h)
+                            } else {
+                                val w = (targetHeight * pageAspect).toInt().coerceAtLeast(1)
+                                Pair(w, targetHeight)
+                            }
+                        }
+                        targetWidth > 0 -> {
+                            val h = (targetWidth / pageAspect).toInt().coerceAtLeast(1)
+                            Pair(targetWidth, h)
+                        }
+                        targetHeight > 0 -> {
+                            val w = (targetHeight * pageAspect).toInt().coerceAtLeast(1)
+                            Pair(w, targetHeight)
+                        }
+                        else -> Pair(page.width, page.height)
+                    }
 
-                    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    val bitmap = try {
+                        Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                    } catch (oom: OutOfMemoryError) {
+                        SafeLogger.w(TAG, "OOM creating page bitmap ($width x $height), falling back to half-scale: ${oom.message}")
+                        Bitmap.createBitmap((width / 2).coerceAtLeast(1), (height / 2).coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+                    }
                     bitmap.eraseColor(Color.WHITE)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    page.render(bitmap, null, null, renderMode)
                     bitmap
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     SafeLogger.w(TAG, "Failed to render page $pageIndex: ${e.message}")
                     null
                 } finally {

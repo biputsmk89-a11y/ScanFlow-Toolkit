@@ -77,7 +77,11 @@ class OcrEngineImpl(
                     val pageBitmap = pdfRendererEngine.renderPage(p, 1200, 1600)
                     if (pageBitmap != null) {
                         val pageResult = recognizeImage(pageBitmap)
-                        val adjustedPageResult = pageResult.copy(pageNumber = p + 1)
+                        val adjustedPageResult = pageResult.copy(
+                            pageNumber = p + 1,
+                            renderWidth = pageBitmap.width,
+                            renderHeight = pageBitmap.height
+                        )
                         pageResults.add(adjustedPageResult)
                         combinedText.append("--- Page ${p + 1} ---\n")
                         combinedText.append(adjustedPageResult.fullText).append("\n\n")
@@ -136,14 +140,16 @@ class OcrEngineImpl(
                             }
                             cs.setGraphicsStateParameters(gState)
 
+                            val scaleX = mediaBox.width / maxOf(1f, pageRes.renderWidth.toFloat())
+                            val scaleY = mediaBox.height / maxOf(1f, pageRes.renderHeight.toFloat())
+
                             pageRes.blocks.forEach { block ->
                                 if (block.text.isNotBlank()) {
+                                    val calcFontSize = (block.boundingBox.height() * scaleY * 0.8f).coerceIn(6f, 24f)
                                     cs.beginText()
-                                    cs.setFont(font, 10f)
+                                    cs.setFont(font, calcFontSize)
 
                                     // Map OCR pixel coordinates to PDF point coordinates (PDF origin is bottom-left)
-                                    val scaleY = mediaBox.height / 1600f
-                                    val scaleX = mediaBox.width / 1200f
                                     val x = (block.boundingBox.left * scaleX).coerceIn(0f, mediaBox.width)
                                     val y = (mediaBox.height - (block.boundingBox.bottom * scaleY)).coerceIn(0f, mediaBox.height)
 

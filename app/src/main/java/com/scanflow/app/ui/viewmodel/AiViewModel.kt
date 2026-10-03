@@ -35,20 +35,48 @@ class AiViewModel(
 
     fun loadDocument(documentId: String) {
         viewModelScope.launch {
-            val doc = container.documentRepository.getDocumentById(documentId)
-            if (doc != null) {
-                _uiState.value = _uiState.value.copy(document = doc, isProcessing = true)
-                val file = File(doc.path)
+            _uiState.value = _uiState.value.copy(isProcessing = true, errorMessage = null)
+            try {
+                val doc = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val dbDoc = container.documentRepository.getDocumentById(documentId)
+                    if (dbDoc != null) return@withContext dbDoc
+                    val file = File(documentId)
+                    if (file.exists()) {
+                        Document(
+                            id = documentId,
+                            name = file.name,
+                            uri = file.toURI().toString(),
+                            path = file.absolutePath,
+                            sizeBytes = file.length(),
+                            pageCount = 1,
+                            mimeType = if (file.extension.equals("pdf", true)) "application/pdf" else "text/plain"
+                        )
+                    } else null
+                }
+                if (doc != null) {
+                    _uiState.value = _uiState.value.copy(document = doc)
+                    val file = File(doc.path)
 
-                // 1. Get insights
-                val insights = container.aiUseCases.getInsights(file)
-                // 2. Get summary
-                val summary = container.aiUseCases.summarize(file)
+                    // 1. Get insights
+                    val insights = container.aiUseCases.getInsights(file)
+                    // 2. Get summary
+                    val summary = container.aiUseCases.summarize(file)
 
+                    _uiState.value = _uiState.value.copy(
+                        insights = insights,
+                        summary = summary,
+                        isProcessing = false
+                    )
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        isProcessing = false,
+                        errorMessage = "Document not found."
+                    )
+                }
+            } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
-                    insights = insights,
-                    summary = summary,
-                    isProcessing = false
+                    isProcessing = false,
+                    errorMessage = e.message ?: "Failed to analyze document"
                 )
             }
         }
@@ -68,16 +96,26 @@ class AiViewModel(
         )
 
         viewModelScope.launch {
-            val answer = container.aiUseCases.ask(File(doc.path), trimmed)
-            val aiMsg = AiMessage(
-                isUser = false,
-                text = answer.answer,
-                citations = answer.citations
-            )
-            _uiState.value = _uiState.value.copy(
-                messages = _uiState.value.messages + aiMsg,
-                isProcessing = false
-            )
+            try {
+                val answer = container.aiUseCases.ask(File(doc.path), trimmed)
+                val aiMsg = AiMessage(
+                    isUser = false,
+                    text = answer.answer,
+                    citations = answer.citations
+                )
+                _uiState.value = _uiState.value.copy(
+                    messages = _uiState.value.messages + aiMsg,
+                    isProcessing = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isProcessing = false,
+                    messages = _uiState.value.messages + AiMessage(
+                        isUser = false,
+                        text = "Error answering question: ${e.message}"
+                    )
+                )
+            }
         }
     }
 }

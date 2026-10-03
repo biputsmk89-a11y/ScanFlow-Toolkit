@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">ScanFlow</string>
+    <string name="app_tagline">Toolkit Dokumen Lengkap</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Beranda</string>
+    <string name="nav_documents">Dokumen</string>
+    <string name="nav_tools">Alat</string>
+    <string name="nav_settings">Pengaturan</string>
+
+    <!-- Quick Actions -->
+    <string name="start_scan">MULAI PINDAI</string>
+    <string name="images_to_pdf">Gambar ke PDF</string>
+    <string name="quick_tools">Alat Cepat</string>
+    <string name="offline_utilities">Utilitas Luring</string>
+    <string name="recent_documents">Dokumen Terkini</string>
+    <string name="see_all">Lihat semua</string>
+    <string name="no_documents">Belum ada dokumen</string>
+    <string name="no_documents_desc">Pindai atau impor dokumen PDF untuk memulai.</string>
+
+    <!-- Common Actions -->
+    <string name="action_save">Simpan</string>
+    <string name="action_cancel">Batal</string>
+    <string name="action_delete">Hapus</string>
+    <string name="action_rename">Ganti Nama</string>
+    <string name="action_share">Bagikan</string>
+    <string name="action_favorite">Favorit</string>
+    <string name="action_compare">Bandingkan</string>
+    <string name="action_execute">Jalankan Operasi</string>
+
+    <!-- Privacy & Security -->
+    <string name="air_gap_title">100% Luring &amp; Terisolasi</string>
+    <string name="air_gap_subtitle">Pemrosesan lokal • Bebas telemetri • 100% Privat</string>
+    <string name="local_storage">Penyimpanan Lokal</string>
+    <string name="native_offline">Luring Asli</string>
+
+    <!-- Scanner -->
+    <string name="scanner_align_prompt">SEJAJARKAN DOKUMEN DALAM BINGKAI</string>
+    <string name="scanner_ready_prompt">DOKUMEN TERDETEKSI • SIAP</string>
+    <string name="scanner_permission_title">Izin Kamera Diperlukan</string>
+    <string name="scanner_permission_desc">ScanFlow memerlukan izin kamera untuk memindai dokumen fisik dengan koreksi perspektif waktu-nyata.</string>
+    <string name="scanner_save_title">Simpan PDF Hasil Pindai</string>
+    <string name="scanner_save_desc">Semua halaman akan digabungkan secara lokal menjadi satu dokumen PDF standar.</string>
+
+    <!-- Viewer -->
+    <string name="viewer_highlighter">Penstabilo</string>
+    <string name="viewer_save_annotation">Simpan Anotasi</string>
+    <string name="viewer_tts_read">Baca Bersuara</string>
+    <string name="viewer_tts_stop">Hentikan Pembacaan</string>
+    <string name="viewer_search_hint">Cari dalam dokumen…</string>
+
+    <!-- AI & Smart Assistant -->
+    <string name="ai_semantic_search">Pencarian Semantik On-Device</string>
+    <string name="ai_summary_title">Ringkasan Dokumen</string>
+    <string name="ai_insights_title">Wawasan Dokumen</string>
+</resources>

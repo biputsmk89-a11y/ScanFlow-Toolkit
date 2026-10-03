@@ -12,7 +12,9 @@ data class OcrBlock(
 data class OcrPageResult(
     val pageNumber: Int,
     val fullText: String,
-    val blocks: List<OcrBlock>
+    val blocks: List<OcrBlock>,
+    val renderWidth: Int = 1200,
+    val renderHeight: Int = 1600
 )
 
 data class OcrResult(

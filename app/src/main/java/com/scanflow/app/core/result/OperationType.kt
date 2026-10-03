@@ -28,11 +28,13 @@ enum class OperationType(val displayName: String, val category: String) {
     WATERMARK("Watermark", "Edit"),
     PAGE_NUMBERS("Page Numbers", "Edit"),
     ANNOTATION("Annotation", "Edit"),
+    CROP_PDF("Crop PDF", "Edit"),
 
     // Security
     PROTECT_PDF("Protect PDF", "Security"),
     UNLOCK_PDF("Unlock PDF", "Security"),
     REMOVE_METADATA("Remove Metadata", "Security"),
+    REDACT_PDF("Redact PDF", "Security"),
 
     // Forms
     FILL_FORM("Fill PDF Form", "Forms"),
@@ -43,9 +45,13 @@ enum class OperationType(val displayName: String, val category: String) {
     // Convert
     PDF_TO_IMAGES("PDF to Images", "Convert"),
     PDF_TO_TEXT("PDF to Text", "Convert"),
+    TEXT_TO_PDF("Text to PDF", "Convert"),
+    CSV_TO_PDF("CSV to PDF", "Convert"),
+    HTML_TO_PDF("HTML to PDF", "Convert"),
 
     // Workflow & AI
     EXECUTE_WORKFLOW("Execute Workflow", "Workflow"),
     AI_SUMMARY("AI Summary", "AI"),
-    AI_ASK("Ask PDF", "AI")
+    AI_ASK("Ask PDF", "AI"),
+    TRANSLATE_PDF("Translate PDF", "AI")
 }

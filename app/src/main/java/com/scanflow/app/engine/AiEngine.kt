@@ -28,4 +28,5 @@ interface AiEngine {
     suspend fun askDocument(file: File, question: String): AiAnswer
     suspend fun getDocumentInsights(file: File): AiDocumentInsight
     suspend fun classifyDocument(file: File): String
+    suspend fun translateDocument(file: File, targetLanguage: String = "id"): String
 }

@@ -108,7 +108,7 @@ fun AiChatScreen(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Local RAG",
+                            text = "On-Device Semantic Search",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF7E22CE),
                             fontWeight = FontWeight.SemiBold

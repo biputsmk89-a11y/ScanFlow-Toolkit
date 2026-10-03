@@ -17,6 +17,8 @@ interface PdfEngine {
     suspend fun watermark(inputFile: File, config: WatermarkConfig, outputFile: File): OperationResult
     suspend fun addPageNumbers(inputFile: File, config: PageNumberConfig, outputFile: File): OperationResult
     suspend fun repair(inputFile: File, outputFile: File): OperationResult
+    suspend fun convertToPdfA(inputFile: File, outputFile: File): OperationResult
+    suspend fun cropPages(inputFile: File, marginPoints: Float, outputFile: File): OperationResult
     suspend fun getPageCount(inputFile: File): Int
     suspend fun isEncrypted(inputFile: File): Boolean
 }

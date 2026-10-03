@@ -6,7 +6,7 @@ import java.io.File
 interface PdfRendererEngine {
     suspend fun open(file: File): Boolean
     suspend fun getPageCount(): Int
-    suspend fun renderPage(pageIndex: Int, targetWidth: Int, targetHeight: Int): Bitmap?
+    suspend fun renderPage(pageIndex: Int, targetWidth: Int, targetHeight: Int, renderMode: Int = 1): Bitmap?
     suspend fun renderThumbnail(file: File, pageIndex: Int = 0, size: Int = 256): Bitmap?
     fun close()
 }

@@ -36,6 +36,11 @@ import com.scanflow.app.engine.WorkflowEngine
 import java.io.File
 import java.util.UUID
 
+fun sanitizePdfFileName(name: String): String {
+    val clean = name.trim()
+    return if (clean.endsWith(".pdf", ignoreCase = true)) clean else "$clean.pdf"
+}
+
 class OrganizeUseCases(
     private val pdfEngine: PdfEngine,
     private val storageEngine: StorageEngine,
@@ -97,6 +102,20 @@ class OrganizeUseCases(
     suspend fun addPageNumbers(file: File, config: PageNumberConfig, outputName: String): OperationResult {
         val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
         val result = pdfEngine.addPageNumbers(file, config, destFile)
+        recordAndRegister(result, file.absolutePath, destFile)
+        return result
+    }
+
+    suspend fun duplicatePages(file: File, pages: List<Int>, outputName: String): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
+        val result = pdfEngine.duplicatePages(file, pages, destFile)
+        recordAndRegister(result, file.absolutePath, destFile)
+        return result
+    }
+
+    suspend fun insertBlankPage(file: File, atIndex: Int, outputName: String): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
+        val result = pdfEngine.insertBlankPage(file, atIndex, destFile)
         recordAndRegister(result, file.absolutePath, destFile)
         return result
     }
@@ -196,6 +215,43 @@ class OptimizeUseCases(
         }
         return result
     }
+
+    suspend fun convertToPdfA(file: File, outputName: String): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
+        val result = pdfEngine.convertToPdfA(file, destFile)
+        if (result.success && destFile.exists()) {
+            documentRepository.insertDocument(
+                Document(
+                    id = UUID.randomUUID().toString(),
+                    name = destFile.name,
+                    uri = destFile.toURI().toString(),
+                    path = destFile.absolutePath,
+                    sizeBytes = destFile.length(),
+                    pageCount = pdfEngine.getPageCount(destFile)
+                )
+            )
+        }
+        return result
+    }
+
+
+    suspend fun crop(file: File, marginPoints: Float, outputName: String): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
+        val result = pdfEngine.cropPages(file, marginPoints, destFile)
+        if (result.success && destFile.exists()) {
+            documentRepository.insertDocument(
+                Document(
+                    id = UUID.randomUUID().toString(),
+                    name = destFile.name,
+                    uri = destFile.toURI().toString(),
+                    path = destFile.absolutePath,
+                    sizeBytes = destFile.length(),
+                    pageCount = pdfEngine.getPageCount(destFile)
+                )
+            )
+        }
+        return result
+    }
 }
 
 class ScannerUseCases(
@@ -210,7 +266,7 @@ class ScannerUseCases(
         scannerEngine.processScannedPage(bitmap, corners, filter)
 
     suspend fun compileSession(session: ScanSession, documentName: String): OperationResult {
-        val destFile = File(storageEngine.getDocumentsDirectory(), "$documentName.pdf")
+        val destFile = File(storageEngine.getDocumentsDirectory(), sanitizePdfFileName(documentName))
         val result = scannerEngine.compileSessionToPdf(session, destFile)
         if (result.success && destFile.exists()) {
             documentRepository.insertDocument(
@@ -357,9 +413,16 @@ class ConversionUseCases(
     private val documentRepository: DocumentRepository,
     private val pdfEngine: PdfEngine
 ) {
-    suspend fun imagesToPdf(images: List<File>, outputName: String): OperationResult {
+    suspend fun imagesToPdf(
+        images: List<File>,
+        outputName: String,
+        fitPage: Boolean = true,
+        pageSize: String = "A4",
+        orientation: String = "AUTO",
+        margin: String = "SMALL"
+    ): OperationResult {
         val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
-        val result = conversionEngine.imagesToPdf(images, destFile)
+        val result = conversionEngine.imagesToPdf(images, destFile, fitPage, pageSize, orientation, margin)
         if (result.success && destFile.exists()) {
             documentRepository.insertDocument(
                 Document(
@@ -375,23 +438,105 @@ class ConversionUseCases(
         return result
     }
 
-    suspend fun pdfToImages(file: File, format: String, onProgress: ((Int, Int) -> Unit)? = null): List<OperationResult> {
+    suspend fun pdfToImages(
+        file: File,
+        format: String,
+        dpi: Int = 300,
+        onProgress: ((Int, Int) -> Unit)? = null
+    ): List<OperationResult> {
         val outputDir = File(storageEngine.getDocumentsDirectory(), "${file.nameWithoutExtension}_images")
-        return conversionEngine.pdfToImages(file, outputDir, format, 150, onProgress)
+        return conversionEngine.pdfToImages(file, outputDir, format, dpi, onProgress)
     }
 
     suspend fun pdfToText(file: File, outputName: String): OperationResult {
         val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.txt")
         return conversionEngine.pdfToText(file, destFile)
     }
+
+    suspend fun htmlToPdf(
+        htmlFile: File,
+        outputName: String,
+        title: String? = null
+    ): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
+        val result = conversionEngine.htmlToPdf(htmlFile, destFile, title)
+        if (result.success && destFile.exists()) {
+            documentRepository.insertDocument(
+                Document(
+                    id = UUID.randomUUID().toString(),
+                    name = destFile.name,
+                    uri = destFile.toURI().toString(),
+                    path = destFile.absolutePath,
+                    sizeBytes = destFile.length(),
+                    pageCount = pdfEngine.getPageCount(destFile)
+                )
+            )
+        }
+        return result
+    }
+
+    suspend fun textToPdf(
+        textFile: File,
+        outputName: String,
+        title: String? = null,
+        fontSize: Float = 11f
+    ): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
+        val result = conversionEngine.textToPdf(textFile, destFile, title, fontSize)
+        if (result.success && destFile.exists()) {
+            documentRepository.insertDocument(
+                Document(
+                    id = UUID.randomUUID().toString(),
+                    name = destFile.name,
+                    uri = destFile.toURI().toString(),
+                    path = destFile.absolutePath,
+                    sizeBytes = destFile.length(),
+                    pageCount = pdfEngine.getPageCount(destFile)
+                )
+            )
+        }
+        return result
+    }
+
+    suspend fun pdfToCsv(file: File, outputName: String): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.csv")
+        return conversionEngine.pdfToCsv(file, destFile)
+    }
+
+    suspend fun csvToPdf(
+        csvFile: File,
+        outputName: String,
+        title: String? = null,
+        orientation: String = "AUTO",
+        styleTheme: String = "MODERN_NAVY"
+    ): OperationResult {
+        val destFile = File(storageEngine.getDocumentsDirectory(), "$outputName.pdf")
+        val result = conversionEngine.csvToPdf(csvFile, destFile, title, orientation, styleTheme)
+        if (result.success && destFile.exists()) {
+            documentRepository.insertDocument(
+                Document(
+                    id = UUID.randomUUID().toString(),
+                    name = destFile.name,
+                    uri = destFile.toURI().toString(),
+                    path = destFile.absolutePath,
+                    sizeBytes = destFile.length(),
+                    pageCount = pdfEngine.getPageCount(destFile)
+                )
+            )
+        }
+        return result
+    }
 }
+
 
 class AiUseCases(
     private val aiEngine: AiEngine
 ) {
-    suspend fun summarize(file: File): String = aiEngine.summarizeDocument(file)
+    suspend fun summarize(file: File, maxBullets: Int = 5): String = aiEngine.summarizeDocument(file, maxBullets)
     suspend fun ask(file: File, query: String): AiAnswer = aiEngine.askDocument(file, query)
     suspend fun getInsights(file: File): AiDocumentInsight = aiEngine.getDocumentInsights(file)
+    suspend fun translate(file: File, targetLanguage: String = "id"): String = aiEngine.translateDocument(file, targetLanguage)
+    suspend fun classify(file: File): String = aiEngine.classifyDocument(file)
 }
 
 class WorkflowUseCases(

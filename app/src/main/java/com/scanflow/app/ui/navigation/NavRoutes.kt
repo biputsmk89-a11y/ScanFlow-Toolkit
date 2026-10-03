@@ -15,4 +15,5 @@ sealed class Screen(val route: String, val title: String) {
     object AiChat : Screen("ai_chat/{docId}", "Ask PDF") {
         fun createRoute(docId: String) = "ai_chat/$docId"
     }
+    object Compare : Screen("compare", "Compare Documents")
 }
