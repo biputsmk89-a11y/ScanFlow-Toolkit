@@ -165,7 +165,7 @@ fun ScanFlowNavHost() {
                 arguments = listOf(navArgument("featureId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val featureId = backStackEntry.arguments?.getString("featureId") ?: ""
-                val toolViewModel: ToolActionViewModel = viewModel(key = featureId) { ToolActionViewModel(container) }
+                val toolViewModel: ToolActionViewModel = viewModel(key = featureId) { ToolActionViewModel(container.operationDispatcher) }
                 ToolActionScreen(
                     featureId = featureId,
                     viewModel = toolViewModel,

@@ -10,15 +10,7 @@ import com.scanflow.app.domain.repository.DocumentRepository
 import com.scanflow.app.domain.repository.OperationRepository
 import com.scanflow.app.domain.repository.WorkflowRepository
 import com.scanflow.app.domain.usecase.AiUseCases
-import com.scanflow.app.domain.usecase.CompareUseCases
-import com.scanflow.app.domain.usecase.ConversionUseCases
-import com.scanflow.app.domain.usecase.FormUseCases
-import com.scanflow.app.domain.usecase.OcrUseCases
-import com.scanflow.app.domain.usecase.OptimizeUseCases
-import com.scanflow.app.domain.usecase.OrganizeUseCases
 import com.scanflow.app.domain.usecase.ScannerUseCases
-import com.scanflow.app.domain.usecase.SecurityUseCases
-import com.scanflow.app.domain.usecase.WorkflowUseCases
 import com.scanflow.app.engine.AiEngine
 import com.scanflow.app.engine.CompareEngine
 import com.scanflow.app.engine.CompressionEngine
@@ -121,44 +113,31 @@ class AppContainer(val context: Context) {
         AiEngineImpl(ocrEngine)
     }
 
-    // Use Cases
-    val organizeUseCases: OrganizeUseCases by lazy {
-        OrganizeUseCases(pdfEngine, storageEngine, documentRepository, operationRepository)
-    }
-
-    val optimizeUseCases: OptimizeUseCases by lazy {
-        OptimizeUseCases(compressionEngine, pdfEngine, storageEngine, documentRepository, operationRepository)
-    }
-
+    // Domain Use Cases (Specialized)
     val scannerUseCases: ScannerUseCases by lazy {
         ScannerUseCases(scannerEngine, storageEngine, documentRepository, pdfEngine)
-    }
-
-    val ocrUseCases: OcrUseCases by lazy {
-        OcrUseCases(ocrEngine, storageEngine, documentRepository, pdfEngine)
-    }
-
-    val securityUseCases: SecurityUseCases by lazy {
-        SecurityUseCases(securityEngine, storageEngine, documentRepository, pdfEngine)
-    }
-
-    val formUseCases: FormUseCases by lazy {
-        FormUseCases(formEngine, storageEngine, documentRepository, pdfEngine)
-    }
-
-    val compareUseCases: CompareUseCases by lazy {
-        CompareUseCases(compareEngine)
-    }
-
-    val conversionUseCases: ConversionUseCases by lazy {
-        ConversionUseCases(conversionEngine, storageEngine, documentRepository, pdfEngine)
     }
 
     val aiUseCases: AiUseCases by lazy {
         AiUseCases(aiEngine)
     }
 
-    val workflowUseCases: WorkflowUseCases by lazy {
-        WorkflowUseCases(workflowEngine, storageEngine)
+    // Dispatcher
+    val operationDispatcher: com.scanflow.app.domain.dispatcher.DocumentOperationDispatcher by lazy {
+        com.scanflow.app.domain.dispatcher.DocumentOperationDispatcherImpl(
+            storageEngine = storageEngine,
+            pdfEngine = pdfEngine,
+            compressionEngine = compressionEngine,
+            ocrEngine = ocrEngine,
+            securityEngine = securityEngine,
+            formEngine = formEngine,
+            compareEngine = compareEngine,
+            conversionEngine = conversionEngine,
+            workflowEngine = workflowEngine,
+            aiEngine = aiEngine,
+            documentRepository = documentRepository,
+            operationRepository = operationRepository
+        )
     }
 }
+

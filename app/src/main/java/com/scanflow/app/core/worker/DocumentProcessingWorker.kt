@@ -41,14 +41,13 @@ class DocumentProcessingWorker(
             when (opTypeName) {
                 OperationType.COMPRESS_PDF.name -> {
                     setProgress(workDataOf(KEY_PROGRESS to 10))
-                    val result = container.optimizeUseCases.compress(
-                        file = inputFile,
-                        config = CompressionConfig(level = CompressionLevel.MEDIUM),
-                        outputName = outputName,
-                        onProgress = { current, total ->
-                            val percent = (current.toFloat() / total.toFloat() * 100).toInt()
-                            // setProgress runs asynchronously in WorkManager
-                        }
+                    val result = container.operationDispatcher.dispatch(
+                        com.scanflow.app.domain.dispatcher.ToolExecutionRequest(
+                            featureId = "SF-017",
+                            inputFiles = listOf(inputFile),
+                            outputName = outputName,
+                            compressionLevel = CompressionLevel.MEDIUM
+                        )
                     )
                     if (result.success && result.outputPath != null) {
                         Result.success(workDataOf(KEY_OUTPUT_PATH to result.outputPath))
@@ -58,9 +57,12 @@ class DocumentProcessingWorker(
                 }
                 OperationType.SEARCHABLE_PDF.name -> {
                     setProgress(workDataOf(KEY_PROGRESS to 20))
-                    val result = container.ocrUseCases.makeSearchablePdf(
-                        file = inputFile,
-                        outputName = outputName
+                    val result = container.operationDispatcher.dispatch(
+                        com.scanflow.app.domain.dispatcher.ToolExecutionRequest(
+                            featureId = "SF-025",
+                            inputFiles = listOf(inputFile),
+                            outputName = outputName
+                        )
                     )
                     if (result.success && result.outputPath != null) {
                         Result.success(workDataOf(KEY_OUTPUT_PATH to result.outputPath))

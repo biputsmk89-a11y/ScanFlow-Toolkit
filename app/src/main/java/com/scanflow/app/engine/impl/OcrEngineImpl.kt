@@ -11,6 +11,7 @@ import com.scanflow.app.core.logging.SafeLogger
 import com.scanflow.app.core.result.OperationResult
 import com.scanflow.app.core.result.OperationType
 import com.scanflow.app.domain.model.OcrBlock
+import com.scanflow.app.domain.model.OcrLine
 import com.scanflow.app.domain.model.OcrPageResult
 import com.scanflow.app.domain.model.OcrResult
 import com.scanflow.app.engine.OcrEngine
@@ -19,6 +20,7 @@ import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.pdmodel.PDPageContentStream
 import com.tom_roush.pdfbox.pdmodel.font.PDType1Font
 import com.tom_roush.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
+import com.tom_roush.pdfbox.pdmodel.graphics.state.RenderingMode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -30,6 +32,8 @@ class OcrEngineImpl(
 
     companion object {
         private const val TAG = "OcrEngine"
+        private const val RENDER_TARGET_WIDTH = 1500
+        private const val RENDER_TARGET_HEIGHT = 2000
     }
 
     private val recognizer by lazy {
@@ -44,21 +48,43 @@ class OcrEngineImpl(
             val blocks = visionText.textBlocks.mapNotNull { block ->
                 val box = block.boundingBox ?: return@mapNotNull null
                 val rectF = RectF(box.left.toFloat(), box.top.toFloat(), box.right.toFloat(), box.bottom.toFloat())
+
+                val ocrLines = block.lines.mapNotNull { line ->
+                    val lineBox = line.boundingBox ?: return@mapNotNull null
+                    OcrLine(
+                        text = line.text,
+                        boundingBox = RectF(
+                            lineBox.left.toFloat(),
+                            lineBox.top.toFloat(),
+                            lineBox.right.toFloat(),
+                            lineBox.bottom.toFloat()
+                        )
+                    )
+                }
+
                 OcrBlock(
                     text = block.text,
                     boundingBox = rectF,
-                    lines = block.lines.map { it.text }
+                    lines = ocrLines
                 )
             }
 
             OcrPageResult(
                 pageNumber = 1,
                 fullText = visionText.text,
-                blocks = blocks
+                blocks = blocks,
+                renderWidth = bitmap.width,
+                renderHeight = bitmap.height
             )
         } catch (e: Exception) {
             SafeLogger.e(TAG, ErrorCode.OCR_FAILED, e)
-            OcrPageResult(pageNumber = 1, fullText = "", blocks = emptyList())
+            OcrPageResult(
+                pageNumber = 1,
+                fullText = "",
+                blocks = emptyList(),
+                renderWidth = bitmap.width,
+                renderHeight = bitmap.height
+            )
         }
     }
 
@@ -74,7 +100,7 @@ class OcrEngineImpl(
             if (pdfRendererEngine.open(inputFile)) {
                 val totalPages = pdfRendererEngine.getPageCount()
                 for (p in 0 until totalPages) {
-                    val pageBitmap = pdfRendererEngine.renderPage(p, 1200, 1600)
+                    val pageBitmap = pdfRendererEngine.renderPage(p, RENDER_TARGET_WIDTH, RENDER_TARGET_HEIGHT)
                     if (pageBitmap != null) {
                         val pageResult = recognizeImage(pageBitmap)
                         val adjustedPageResult = pageResult.copy(
@@ -119,50 +145,90 @@ class OcrEngineImpl(
         try {
             outputFile.parentFile?.mkdirs()
 
-            // Run OCR to retrieve text blocks
+            // Run OCR to retrieve high-resolution text blocks and lines
             val ocrResult = recognizePdf(inputFile, onProgress)
 
-            // Inject invisible text layer into PDFBox document
+            // Inject 100% invisible text layer into PDFBox document (ISO 32000-1 Mode 3 standard)
             PDDocument.load(inputFile).use { document ->
-                val font = PDType1Font.HELVETICA
+                val font = try {
+                    PDType1Font.HELVETICA
+                } catch (e: Throwable) {
+                    SafeLogger.w(TAG, "Standard14 font not available in current environment: ${e.message}")
+                    null
+                }
                 val totalPages = document.numberOfPages
 
                 ocrResult.pageResults.forEach { pageRes ->
                     val pageIndex = pageRes.pageNumber - 1
                     if (pageIndex in 0 until totalPages) {
                         val page = document.getPage(pageIndex)
-                        val mediaBox = page.mediaBox
+                        val viewBox = page.cropBox ?: page.mediaBox
 
                         PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true, true).use { cs ->
-                            // Set invisible text rendering (alpha = 0)
+                            // 1. Text rendering mode 3: Neither fill nor stroke text (Standard Invisible Text)
+                            cs.setRenderingMode(RenderingMode.NEITHER)
+
+                            // 2. Extra safety: Set non-stroking alpha to 0.0f
                             val gState = PDExtendedGraphicsState().apply {
                                 nonStrokingAlphaConstant = 0.0f
+                                strokingAlphaConstant = 0.0f
                             }
                             cs.setGraphicsStateParameters(gState)
 
-                            val scaleX = mediaBox.width / maxOf(1f, pageRes.renderWidth.toFloat())
-                            val scaleY = mediaBox.height / maxOf(1f, pageRes.renderHeight.toFloat())
+                            val scaleX = viewBox.width / maxOf(1f, pageRes.renderWidth.toFloat())
+                            val scaleY = viewBox.height / maxOf(1f, pageRes.renderHeight.toFloat())
 
-                            pageRes.blocks.forEach { block ->
-                                if (block.text.isNotBlank()) {
-                                    val calcFontSize = (block.boundingBox.height() * scaleY * 0.8f).coerceIn(6f, 24f)
-                                    cs.beginText()
-                                    cs.setFont(font, calcFontSize)
-
-                                    // Map OCR pixel coordinates to PDF point coordinates (PDF origin is bottom-left)
-                                    val x = (block.boundingBox.left * scaleX).coerceIn(0f, mediaBox.width)
-                                    val y = (mediaBox.height - (block.boundingBox.bottom * scaleY)).coerceIn(0f, mediaBox.height)
-
-                                    cs.newLineAtOffset(x, y)
-                                    // Sanitize text for standard font
-                                    val safeText = block.text.replace("\n", " ").filter { it.code in 32..126 }
-                                    if (safeText.isNotEmpty()) {
-                                        cs.showText(safeText)
+                            if (font != null) {
+                                pageRes.blocks.forEach { block ->
+                                // Render line-by-line for exact typography metrics and positioning
+                                val linesToRender = if (block.lines.isNotEmpty()) {
+                                    block.lines
+                                } else {
+                                    block.text.split("\n").filter { it.isNotBlank() }.map { lineText ->
+                                        OcrLine(text = lineText, boundingBox = block.boundingBox)
                                     }
-                                    cs.endText()
+                                }
+
+                                linesToRender.forEach { line ->
+                                    val cleanText = sanitizeForType1Font(font, line.text)
+                                    if (cleanText.isNotBlank()) {
+                                        val lineBox = line.boundingBox
+                                        val lineWidthPt = lineBox.width() * scaleX
+                                        val lineHeightPt = lineBox.height() * scaleY
+
+                                        // Measure text width at 1pt font size using the font metrics
+                                        val textWidthAt1Pt = try {
+                                            font.getStringWidth(cleanText) / 1000f
+                                        } catch (e: Exception) {
+                                            cleanText.length * 0.5f
+                                        }
+
+                                        // Calculate optimal font size fitting both line height and width
+                                        val fontFromWidth = if (textWidthAt1Pt > 0) (lineWidthPt / textWidthAt1Pt) else lineHeightPt * 0.8f
+                                        val fontFromHeight = lineHeightPt * 0.85f
+                                        val calcFontSize = minOf(fontFromWidth, fontFromHeight).coerceIn(4f, 48f)
+
+                                        // Position baseline accurately:
+                                        // PDF coordinates have origin at bottom-left; ML Kit origin is at top-left
+                                        val x = (viewBox.lowerLeftX + (lineBox.left * scaleX))
+                                            .coerceIn(viewBox.lowerLeftX, viewBox.upperRightX)
+                                        val y = (viewBox.lowerLeftY + (viewBox.height - (lineBox.bottom * scaleY)) + (calcFontSize * 0.15f))
+                                            .coerceIn(viewBox.lowerLeftY, viewBox.upperRightY)
+
+                                        try {
+                                            cs.beginText()
+                                            cs.setFont(font, calcFontSize)
+                                            cs.newLineAtOffset(x, y)
+                                            cs.showText(cleanText)
+                                            cs.endText()
+                                        } catch (e: Exception) {
+                                            SafeLogger.w(TAG, "Failed to render text line '$cleanText': ${e.message}")
+                                        }
+                                    }
                                 }
                             }
                         }
+                    }
                     }
                 }
                 document.save(outputFile)
@@ -216,4 +282,34 @@ class OcrEngineImpl(
                 )
             }
         }
+
+    /**
+     * Sanitizes strings to ensure full compatibility with PDType1Font (WinAnsiEncoding).
+     * Converts smart quotes, dashes, and filters unsupported glyphs to prevent encoding exceptions.
+     */
+    private fun sanitizeForType1Font(font: PDType1Font, text: String): String {
+        val sb = StringBuilder()
+        for (char in text) {
+            val mapped = when (char) {
+                '\n', '\r', '\t' -> ' '
+                '“', '”' -> '"'
+                '‘', '’' -> '\''
+                '—', '–' -> '-'
+                '…' -> '.'
+                '•' -> '*'
+                else -> char
+            }
+            if (mapped.code in 32..126) {
+                sb.append(mapped)
+            } else {
+                try {
+                    font.encode(mapped.toString())
+                    sb.append(mapped)
+                } catch (_: Exception) {
+                    sb.append(' ')
+                }
+            }
+        }
+        return sb.toString().replace(Regex("\\s+"), " ").trim()
+    }
 }

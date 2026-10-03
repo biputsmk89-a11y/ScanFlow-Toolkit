@@ -69,3 +69,20 @@ val NeutralSurfaceLight = StitchSurfaceContainerLowest
 val NeutralBorderLight = StitchOutlineVariant
 val TextPrimaryLight = StitchOnSurface
 val TextSecondaryLight = StitchOnSurfaceVariant
+
+// UI-UX Pro Max Functional Category Accent Tokens
+val CategoryOrganize = Color(0xFF2563EB)
+val CategoryOrganizeContainer = Color(0xFFEFF6FF)
+val CategoryOptimize = Color(0xFF0D9488)
+val CategoryOptimizeContainer = Color(0xFFF0FDFA)
+val CategoryConvert = Color(0xFFEA580C)
+val CategoryConvertContainer = Color(0xFFFFF7ED)
+val CategoryEdit = Color(0xFFD97706)
+val CategoryEditContainer = Color(0xFFFFFBEB)
+val CategorySecurity = Color(0xFF059669)
+val CategorySecurityContainer = Color(0xFFECFDF5)
+val CategoryIntelligence = Color(0xFF7C3AED)
+val CategoryIntelligenceContainer = Color(0xFFFAF5FF)
+val CategoryWorkflow = Color(0xFF4F46E5)
+val CategoryWorkflowContainer = Color(0xFFEEF2FF)
+

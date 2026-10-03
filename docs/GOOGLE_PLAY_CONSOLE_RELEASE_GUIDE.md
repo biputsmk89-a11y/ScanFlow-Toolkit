@@ -1,6 +1,6 @@
 # PANDUAN RILIS GOOGLE PLAY CONSOLE — SCANFLOW
 **ScanFlow — All-in-One Document Toolkit**  
-*Versi Rilis: 1.2.0 (Version Code: 3)*
+*Versi Rilis: 1.3.0 (Version Code: 4)*
 
 ---
 
@@ -10,8 +10,8 @@ Berkas rilis siap upload telah dipaketkan dan diletakkan pada folder root `relea
 
 | Nama Berkas | Format | Ukuran | Kegunaan | Lokasi File |
 | :--- | :---: | :---: | :--- | :--- |
-| **ScanFlow-v1.2.0-release.aab** | `.aab` | ~98.1 MB | **Upload ke Google Play Console** (Wajib format AAB untuk aplikasi baru) | [`release/ScanFlow-v1.2.0-release.aab`](file:///d:/SMK%20Projek/ScanFlow%20-%20ALL%20IN%20ONE%20DOCUMENT%20TOOLKIT/release/ScanFlow-v1.2.0-release.aab) |
-| **ScanFlow-v1.2.0-release.apk** | `.apk` | ~202.8 MB | **Instalasi Langsung di HP / Side-loading** (Sudah bertanda tangan rilis) | [`release/ScanFlow-v1.2.0-release.apk`](file:///d:/SMK%20Projek/ScanFlow%20-%20ALL%20IN%20ONE%20DOCUMENT%20TOOLKIT/release/ScanFlow-v1.2.0-release.apk) |
+| **ScanFlow-v1.3.0-release.aab** | `.aab` | ~98.1 MB | **Upload ke Google Play Console** (Wajib format AAB untuk aplikasi baru) | [`release/ScanFlow-v1.3.0-release.aab`](file:///d:/SMK%20Projek/ScanFlow%20-%20ALL%20IN%20ONE%20DOCUMENT%20TOOLKIT/release/ScanFlow-v1.3.0-release.aab) |
+| **ScanFlow-v1.3.0-release.apk** | `.apk` | ~202.8 MB | **Instalasi Langsung di HP / Side-loading** (Sudah bertanda tangan rilis) | [`release/ScanFlow-v1.3.0-release.apk`](file:///d:/SMK%20Projek/ScanFlow%20-%20ALL%20IN%20ONE%20DOCUMENT%20TOOLKIT/release/ScanFlow-v1.3.0-release.apk) |
 | **playstore_icon.png** | `.png` | 512x512 | **Ikon Aplikasi Utama di Halaman Play Store** | [`playstore_icon.png`](file:///d:/SMK%20Projek/ScanFlow%20-%20ALL%20IN%20ONE%20DOCUMENT%20TOOLKIT/playstore_icon.png) |
 
 ---
@@ -29,15 +29,15 @@ Aplikasi telah ditandatangani menggunakan sertifikat rilis standar industri deng
 * **Pemilik Sertifikat**: `CN=ScanFlow, OU=Mobile, O=ScanFlow Toolkit, L=Jakarta, ST=DKI, C=ID`
 
 > [!IMPORTANT]
-> Simpan file `app/scanflow-release-key.jks` dan kredensial password di atas dengan aman. File ini wajib digunakan kembali saat Anda merilis pembaruan versi berikutnya (v1.2.1, v1.3.0, dst.).
+> Simpan file `app/scanflow-release-key.jks` dan kredensial password di atas dengan aman. File ini wajib digunakan kembali saat Anda merilis pembaruan versi berikutnya (v1.3.1, v1.4.0, dst.).
 
 ---
 
 ## 3. Spesifikasi Teknis Aplikasi untuk Play Console
 
 * **Package Name (Application ID)**: `com.scanflow.app`
-* **Version Name**: `1.2.0`
-* **Version Code**: `3`
+* **Version Name**: `1.3.0`
+* **Version Code**: `4`
 * **Compile SDK**: `36` (Android 16 API)
 * **Target SDK**: `36` (Memenuhi standar kebijakan terbaru Google Play)
 * **Minimum SDK**: `26` (Mendukung Android 8.0 Oreo hingga Android 16+)

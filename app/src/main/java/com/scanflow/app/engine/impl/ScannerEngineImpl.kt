@@ -275,17 +275,23 @@ class ScannerEngineImpl(
                         if (ocrRes.blocks.isNotEmpty()) {
                             val textPaint = Paint().apply {
                                 color = android.graphics.Color.TRANSPARENT
-                                textSize = 28f
                                 isAntiAlias = true
                             }
                             ocrRes.blocks.forEach { block ->
-                                val lines = if (block.lines.isNotEmpty()) block.lines else block.text.lines()
-                                val textLeft = left + block.boundingBox.left * scale
-                                val lineSpacing = if (lines.isNotEmpty()) (block.boundingBox.height() * scale / lines.size) else 34f
-                                lines.forEachIndexed { lineIdx, lineText ->
-                                    if (lineText.isNotBlank()) {
-                                        val lineY = top + (block.boundingBox.top * scale) + ((lineIdx + 1) * lineSpacing)
-                                        canvas.drawText(lineText, textLeft, lineY, textPaint)
+                                val lines = if (block.lines.isNotEmpty()) {
+                                    block.lines
+                                } else {
+                                    block.text.lines().filter { it.isNotBlank() }.map { 
+                                        com.scanflow.app.domain.model.OcrLine(it, block.boundingBox) 
+                                    }
+                                }
+                                lines.forEach { ocrLine ->
+                                    if (ocrLine.text.isNotBlank()) {
+                                        val lineLeft = left + (ocrLine.boundingBox.left * scale)
+                                        val lineBottom = top + (ocrLine.boundingBox.bottom * scale)
+                                        val fontHeight = (ocrLine.boundingBox.height() * scale * 0.8f).coerceIn(8f, 72f)
+                                        textPaint.textSize = fontHeight
+                                        canvas.drawText(ocrLine.text, lineLeft, lineBottom, textPaint)
                                     }
                                 }
                             }

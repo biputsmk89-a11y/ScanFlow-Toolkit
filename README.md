@@ -74,8 +74,8 @@ cd ScanFlow-Toolkit
 ## 📦 Production Release Binaries
 
 Pre-compiled and release-signed production artifacts are located in the `release/` directory:
-* **Google Play Console Bundle**: [`release/ScanFlow-v1.2.0-release.aab`](./release/ScanFlow-v1.2.0-release.aab) *(~98.1 MB)*
-* **Direct Install APK**: [`release/ScanFlow-v1.2.0-release.apk`](./release/ScanFlow-v1.2.0-release.apk) *(~202.8 MB)*
+* **Google Play Console Bundle**: [`release/ScanFlow-v1.3.0-release.aab`](./release/ScanFlow-v1.3.0-release.aab) *(~98.1 MB)*
+* **Direct Install APK**: [`release/ScanFlow-v1.3.0-release.apk`](./release/ScanFlow-v1.3.0-release.apk) *(~202.8 MB)*
 * **Main Store Icon**: [`playstore_icon.png`](./playstore_icon.png) *(512x512 px)*
 
 For complete step-by-step submission instructions, refer to the [Google Play Console Release Guide](./docs/GOOGLE_PLAY_CONSOLE_RELEASE_GUIDE.md).

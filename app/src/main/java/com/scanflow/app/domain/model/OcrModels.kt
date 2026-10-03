@@ -2,11 +2,17 @@ package com.scanflow.app.domain.model
 
 import android.graphics.RectF
 
+data class OcrLine(
+    val text: String,
+    val boundingBox: RectF,
+    val confidence: Float = 1.0f
+)
+
 data class OcrBlock(
     val text: String,
     val boundingBox: RectF,
     val confidence: Float = 1.0f,
-    val lines: List<String> = emptyList()
+    val lines: List<OcrLine> = emptyList()
 )
 
 data class OcrPageResult(

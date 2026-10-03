@@ -21,6 +21,23 @@ val MetricMonoSmall = TextStyle(
     lineHeight = 14.sp
 )
 
+val TagBadge = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontWeight = FontWeight.Bold,
+    fontSize = 10.sp,
+    lineHeight = 13.sp,
+    letterSpacing = 0.4.sp
+)
+
+val SectionHeaderTitle = TextStyle(
+    fontFamily = FontFamily.Default,
+    fontWeight = FontWeight.Bold,
+    fontSize = 18.sp,
+    lineHeight = 24.sp,
+    letterSpacing = (-0.2).sp
+)
+
+
 val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = FontFamily.Default,

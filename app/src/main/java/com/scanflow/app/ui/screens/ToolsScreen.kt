@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material3.Card
@@ -37,15 +38,40 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.ripple
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.scanflow.app.core.theme.CategoryConvert
+import com.scanflow.app.core.theme.CategoryConvertContainer
+import com.scanflow.app.core.theme.CategoryEdit
+import com.scanflow.app.core.theme.CategoryEditContainer
+import com.scanflow.app.core.theme.CategoryIntelligence
+import com.scanflow.app.core.theme.CategoryIntelligenceContainer
+import com.scanflow.app.core.theme.CategoryOptimize
+import com.scanflow.app.core.theme.CategoryOptimizeContainer
+import com.scanflow.app.core.theme.CategoryOrganize
+import com.scanflow.app.core.theme.CategoryOrganizeContainer
+import com.scanflow.app.core.theme.CategorySecurity
+import com.scanflow.app.core.theme.CategorySecurityContainer
+import com.scanflow.app.core.theme.CategoryWorkflow
+import com.scanflow.app.core.theme.CategoryWorkflowContainer
 import com.scanflow.app.core.theme.MetricMonoSmall
+import com.scanflow.app.core.theme.SectionHeaderTitle
+import com.scanflow.app.core.theme.StitchPrimary
+import com.scanflow.app.core.theme.StitchPrimaryFixed
+import com.scanflow.app.core.theme.TagBadge
 import com.scanflow.app.ui.components.AppHeader
 import com.scanflow.app.ui.components.EmptyStateView
 import com.scanflow.app.ui.viewmodel.ToolsViewModel
@@ -62,6 +88,17 @@ enum class ToolTabCategory(val label: String, val icon: ImageVector) {
     EDIT("Edit PDF", Icons.Default.Edit),
     SECURITY("PDF Security", Icons.Default.Security),
     INTELLIGENCE("PDF Intelligence", Icons.Default.AutoAwesome)
+}
+
+fun getCategoryColors(category: ToolTabCategory): Pair<Color, Color> = when (category) {
+    ToolTabCategory.WORKFLOWS -> CategoryWorkflow to CategoryWorkflowContainer
+    ToolTabCategory.ORGANIZE -> CategoryOrganize to CategoryOrganizeContainer
+    ToolTabCategory.OPTIMIZE -> CategoryOptimize to CategoryOptimizeContainer
+    ToolTabCategory.CONVERT -> CategoryConvert to CategoryConvertContainer
+    ToolTabCategory.EDIT -> CategoryEdit to CategoryEditContainer
+    ToolTabCategory.SECURITY -> CategorySecurity to CategorySecurityContainer
+    ToolTabCategory.INTELLIGENCE -> CategoryIntelligence to CategoryIntelligenceContainer
+    ToolTabCategory.ALL -> StitchPrimary to StitchPrimaryFixed
 }
 
 data class ToolItemDefinition(
@@ -115,7 +152,7 @@ fun ToolsScreen(
                 title = "Merge PDF",
                 description = "Combine multiple PDFs in the order you want",
                 category = ToolTabCategory.ORGANIZE,
-                icon = Icons.Default.CallMerge,
+                icon = Icons.AutoMirrored.Filled.CallMerge,
                 badge = "Easiest",
                 onClick = { onNavigateToTool("SF-001") }
             ),
@@ -124,7 +161,7 @@ fun ToolsScreen(
                 title = "Split PDF",
                 description = "Separate one page or a whole set into independent files",
                 category = ToolTabCategory.ORGANIZE,
-                icon = Icons.Default.CallSplit,
+                icon = Icons.AutoMirrored.Filled.CallSplit,
                 onClick = { onNavigateToTool("SF-002") }
             ),
             ToolItemDefinition(
@@ -149,7 +186,7 @@ fun ToolsScreen(
                 title = "Rotate PDF",
                 description = "Rotate your PDFs the way you need them (90°, 180°, 270°)",
                 category = ToolTabCategory.ORGANIZE,
-                icon = Icons.Default.RotateRight,
+                icon = Icons.AutoMirrored.Filled.RotateRight,
                 onClick = { onNavigateToTool("SF-008") }
             ),
             ToolItemDefinition(
@@ -220,7 +257,7 @@ fun ToolsScreen(
                 title = "Text to PDF",
                 description = "Convert plain text files (.txt) and notes into formatted PDF",
                 category = ToolTabCategory.CONVERT,
-                icon = Icons.Default.Article,
+                icon = Icons.AutoMirrored.Filled.Article,
                 badge = "TXT",
                 onClick = { onNavigateToTool("SF-099") }
             ),
@@ -309,7 +346,7 @@ fun ToolsScreen(
                 title = "Watermark",
                 description = "Stamp custom text over your PDF with angle & opacity",
                 category = ToolTabCategory.EDIT,
-                icon = Icons.Default.BrandingWatermark,
+                icon = Icons.AutoMirrored.Filled.BrandingWatermark,
                 onClick = { onNavigateToTool("SF-078") }
             ),
             ToolItemDefinition(
@@ -333,7 +370,7 @@ fun ToolsScreen(
                 title = "PDF Forms",
                 description = "Detect and fill interactive PDF forms, checkboxes and text",
                 category = ToolTabCategory.EDIT,
-                icon = Icons.Default.Assignment,
+                icon = Icons.AutoMirrored.Filled.Assignment,
                 badge = "New!",
                 onClick = { onNavigateToTool("SF-086") }
             ),
@@ -496,7 +533,148 @@ fun ToolsScreen(
                 }
             }
 
-            // Top Category Tabs mirroring iLovePDF Filter Bar
+            // Quick Actions Hero Bento (Shown when not searching)
+            if (searchInput.isBlank()) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "POPULAR UTILITIES",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "Fast Launch",
+                                style = MetricMonoSmall,
+                                color = MaterialTheme.colorScheme.outline
+                            )
+                        }
+
+                        // 2x2 Bento Quick Action Grid
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            BentoQuickCard(
+                                title = "Scan to PDF",
+                                subtitle = "CameraX auto-crop",
+                                icon = Icons.Default.DocumentScanner,
+                                accentColor = CategorySecurity,
+                                containerColor = CategorySecurityContainer,
+                                onClick = onNavigateToScanner,
+                                modifier = Modifier.weight(1f)
+                            )
+                            BentoQuickCard(
+                                title = "Merge PDF",
+                                subtitle = "Combine multiple",
+                                icon = Icons.AutoMirrored.Filled.CallMerge,
+                                accentColor = CategoryOrganize,
+                                containerColor = CategoryOrganizeContainer,
+                                onClick = { onNavigateToTool("SF-001") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            BentoQuickCard(
+                                title = "Smart Compress",
+                                subtitle = "Up to -70% size",
+                                icon = Icons.Default.Compress,
+                                accentColor = CategoryOptimize,
+                                containerColor = CategoryOptimizeContainer,
+                                onClick = { onNavigateToTool("SF-010") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            BentoQuickCard(
+                                title = "AI Assistant",
+                                subtitle = "Ask & Summarize",
+                                icon = Icons.Default.AutoAwesome,
+                                accentColor = CategoryIntelligence,
+                                containerColor = CategoryIntelligenceContainer,
+                                onClick = { onNavigateToTool("SF-108") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+
+                // Offline Guarantee Banner
+                item {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.OfflineBolt,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "100% Offline Engine Active",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Every tool processes locally with zero cloud upload",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Private",
+                                style = TagBadge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Top Category Tabs with Count Badges
             item {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -506,6 +684,12 @@ fun ToolsScreen(
                 ) {
                     ToolTabCategory.values().forEach { tab ->
                         val isSelected = activeTab == tab
+                        val count = remember(allTools, tab) {
+                            if (tab == ToolTabCategory.ALL) allTools.size
+                            else allTools.count { it.category == tab }
+                        }
+                        val (tabAccent, _) = getCategoryColors(tab)
+
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -513,7 +697,7 @@ fun ToolsScreen(
                                 .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerLow)
                                 .border(
                                     width = 1.dp,
-                                    color = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
+                                    color = if (isSelected) Color.Transparent else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                                     shape = RoundedCornerShape(50)
                                 )
                                 .clickable { activeTab = tab }
@@ -522,7 +706,7 @@ fun ToolsScreen(
                             Icon(
                                 imageVector = tab.icon,
                                 contentDescription = null,
-                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary,
+                                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else tabAccent,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -532,69 +716,25 @@ fun ToolsScreen(
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
                             )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(50))
+                                    .background(
+                                        if (isSelected) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f)
+                                        else MaterialTheme.colorScheme.surfaceContainerHigh
+                                    )
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "$count",
+                                    style = MetricMonoSmall,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
-                    }
-                }
-            }
-
-            // Offline Guarantee Banner
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f), RoundedCornerShape(14.dp))
-                        .padding(14.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.OfflineBolt,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "100% Offline Engine Active",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Every tool processes locally with zero cloud upload",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "Private",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
                     }
                 }
             }
@@ -618,6 +758,7 @@ fun ToolsScreen(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -627,12 +768,13 @@ fun ToolsScreen(
                 // Section 1: Workflows
                 if (activeTab == ToolTabCategory.ALL || activeTab == ToolTabCategory.WORKFLOWS) {
                     val items = allTools.filter { it.category == ToolTabCategory.WORKFLOWS }
-                    item { ToolSectionHeader(title = "Workflows", utilityCount = items.size) }
+                    item { ToolSectionHeader(title = "Workflows", utilityCount = items.size, categoryColor = CategoryWorkflow) }
                     items(items) { item ->
                         StitchToolItem(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -642,12 +784,13 @@ fun ToolsScreen(
                 // Section 2: Organize PDF
                 if (activeTab == ToolTabCategory.ALL || activeTab == ToolTabCategory.ORGANIZE) {
                     val items = allTools.filter { it.category == ToolTabCategory.ORGANIZE }
-                    item { ToolSectionHeader(title = "Organize PDF", utilityCount = items.size) }
+                    item { ToolSectionHeader(title = "Organize PDF", utilityCount = items.size, categoryColor = CategoryOrganize) }
                     items(items) { item ->
                         StitchToolItem(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -657,12 +800,13 @@ fun ToolsScreen(
                 // Section 3: Optimize PDF
                 if (activeTab == ToolTabCategory.ALL || activeTab == ToolTabCategory.OPTIMIZE) {
                     val items = allTools.filter { it.category == ToolTabCategory.OPTIMIZE }
-                    item { ToolSectionHeader(title = "Optimize PDF", utilityCount = items.size) }
+                    item { ToolSectionHeader(title = "Optimize PDF", utilityCount = items.size, categoryColor = CategoryOptimize) }
                     items(items) { item ->
                         StitchToolItem(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -672,12 +816,13 @@ fun ToolsScreen(
                 // Section 4: Convert PDF
                 if (activeTab == ToolTabCategory.ALL || activeTab == ToolTabCategory.CONVERT) {
                     val items = allTools.filter { it.category == ToolTabCategory.CONVERT }
-                    item { ToolSectionHeader(title = "Convert PDF", utilityCount = items.size) }
+                    item { ToolSectionHeader(title = "Convert PDF", utilityCount = items.size, categoryColor = CategoryConvert) }
                     items(items) { item ->
                         StitchToolItem(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -687,12 +832,13 @@ fun ToolsScreen(
                 // Section 5: Edit PDF
                 if (activeTab == ToolTabCategory.ALL || activeTab == ToolTabCategory.EDIT) {
                     val items = allTools.filter { it.category == ToolTabCategory.EDIT }
-                    item { ToolSectionHeader(title = "Edit PDF", utilityCount = items.size) }
+                    item { ToolSectionHeader(title = "Edit PDF", utilityCount = items.size, categoryColor = CategoryEdit) }
                     items(items) { item ->
                         StitchToolItem(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -702,12 +848,13 @@ fun ToolsScreen(
                 // Section 6: PDF Security
                 if (activeTab == ToolTabCategory.ALL || activeTab == ToolTabCategory.SECURITY) {
                     val items = allTools.filter { it.category == ToolTabCategory.SECURITY }
-                    item { ToolSectionHeader(title = "PDF Security", utilityCount = items.size) }
+                    item { ToolSectionHeader(title = "PDF Security", utilityCount = items.size, categoryColor = CategorySecurity) }
                     items(items) { item ->
                         StitchToolItem(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -717,12 +864,13 @@ fun ToolsScreen(
                 // Section 7: PDF Intelligence
                 if (activeTab == ToolTabCategory.ALL || activeTab == ToolTabCategory.INTELLIGENCE) {
                     val items = allTools.filter { it.category == ToolTabCategory.INTELLIGENCE }
-                    item { ToolSectionHeader(title = "PDF Intelligence", utilityCount = items.size) }
+                    item { ToolSectionHeader(title = "PDF Intelligence", utilityCount = items.size, categoryColor = CategoryIntelligence) }
                     items(items) { item ->
                         StitchToolItem(
                             title = item.title,
                             description = item.description,
                             icon = item.icon,
+                            category = item.category,
                             badge = item.badge,
                             onClick = item.onClick
                         )
@@ -740,36 +888,122 @@ fun ToolsScreen(
 @Composable
 private fun ToolSectionHeader(
     title: String,
-    utilityCount: Int
+    utilityCount: Int,
+    categoryColor: Color = MaterialTheme.colorScheme.primary
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 4.dp)
+            .padding(top = 10.dp, bottom = 4.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(width = 4.dp, height = 14.dp)
+                    .size(width = 4.dp, height = 16.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(MaterialTheme.colorScheme.primary)
+                    .background(categoryColor)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title.uppercase(),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 0.5.sp,
+                style = SectionHeaderTitle,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
-        Text(
-            text = "$utilityCount utilities",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.secondary
-        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(50))
+                .background(categoryColor.copy(alpha = 0.12f))
+                .padding(horizontal = 8.dp, vertical = 3.dp)
+        ) {
+            Text(
+                text = "$utilityCount tools",
+                style = MetricMonoSmall,
+                fontWeight = FontWeight.Bold,
+                color = categoryColor
+            )
+        }
+    }
+}
+
+@Composable
+private fun BentoQuickCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accentColor: Color,
+    containerColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "bentoQuickPress"
+    )
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            accentColor.copy(alpha = 0.25f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(bounded = true),
+                onClick = onClick
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(containerColor)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(10.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -778,20 +1012,41 @@ private fun StitchToolItem(
     title: String,
     description: String,
     icon: ImageVector,
+    category: ToolTabCategory,
     onClick: () -> Unit,
     badge: String? = null
 ) {
+    val (accentColor, containerColor) = getCategoryColors(category)
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.985f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "toolItemPressScale"
+    )
+
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(bounded = true),
+                onClick = onClick
+            )
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -802,14 +1057,14 @@ private fun StitchToolItem(
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(containerColor)
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
+                    tint = accentColor,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -828,7 +1083,7 @@ private fun StitchToolItem(
 
                     if (badge != null) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        val isBadgeAlert = badge == "-70%" || badge == "New!"
+                        val isBadgeAlert = badge == "-70%" || badge == "New!" || badge == "Lossless"
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
@@ -836,20 +1091,18 @@ private fun StitchToolItem(
                                     if (isBadgeAlert) {
                                         MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.7f)
                                     } else {
-                                        MaterialTheme.colorScheme.primaryContainer
+                                        accentColor.copy(alpha = 0.14f)
                                     }
                                 )
                                 .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = badge,
-                                style = MaterialTheme.typography.labelSmall,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
+                                style = TagBadge,
                                 color = if (isBadgeAlert) {
                                     MaterialTheme.colorScheme.error
                                 } else {
-                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                    accentColor
                                 }
                             )
                         }
@@ -869,7 +1122,7 @@ private fun StitchToolItem(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier.size(20.dp)
             )
         }
