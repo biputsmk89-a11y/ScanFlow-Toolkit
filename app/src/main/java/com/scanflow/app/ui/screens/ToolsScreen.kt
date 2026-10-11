@@ -115,7 +115,6 @@ data class ToolItemDefinition(
 fun ToolsScreen(
     viewModel: ToolsViewModel,
     onNavigateToTool: (String) -> Unit,
-    onNavigateToScanner: () -> Unit = {},
     onNavigateToCompare: () -> Unit = {},
     onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -124,7 +123,7 @@ fun ToolsScreen(
     var activeTab by remember { mutableStateOf(ToolTabCategory.ALL) }
 
     // Complete 31-Tool Matrix mirroring iLovePDF Full Dashboard
-    val allTools = remember(onNavigateToScanner, onNavigateToTool, onNavigateToCompare) {
+    val allTools = remember(onNavigateToTool, onNavigateToCompare) {
         listOf(
             // --- 1. WORKFLOWS ---
             ToolItemDefinition(
@@ -172,15 +171,7 @@ fun ToolsScreen(
                 icon = Icons.Default.DashboardCustomize,
                 onClick = { onNavigateToTool("SF-005") }
             ),
-            ToolItemDefinition(
-                id = "SF-006",
-                title = "Scan to PDF",
-                description = "Capture document scans with camera auto-crop & filters",
-                category = ToolTabCategory.ORGANIZE,
-                icon = Icons.Default.DocumentScanner,
-                badge = "CameraX",
-                onClick = onNavigateToScanner
-            ),
+
             ToolItemDefinition(
                 id = "SF-008",
                 title = "Rotate PDF",
@@ -476,7 +467,6 @@ fun ToolsScreen(
     ) {
         // App Header
         AppHeader(
-            title = "ScanFlow",
             subtitle = "Tools",
             onProfileClick = onNavigateToSettings
         )
@@ -510,7 +500,7 @@ fun ToolsScreen(
                         onValueChange = { searchInput = it },
                         placeholder = {
                             Text(
-                                "Find any PDF or scanner tool...",
+                                "Search tools, conversion, utilities...",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -567,12 +557,12 @@ fun ToolsScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             BentoQuickCard(
-                                title = "Scan to PDF",
-                                subtitle = "CameraX auto-crop",
-                                icon = Icons.Default.DocumentScanner,
-                                accentColor = CategorySecurity,
-                                containerColor = CategorySecurityContainer,
-                                onClick = onNavigateToScanner,
+                                title = "Convert to PDF",
+                                subtitle = "Word, Excel, Images",
+                                icon = Icons.Default.Transform,
+                                accentColor = CategoryConvert,
+                                containerColor = CategoryConvertContainer,
+                                onClick = { onNavigateToTool("SF-094") },
                                 modifier = Modifier.weight(1f)
                             )
                             BentoQuickCard(

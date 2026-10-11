@@ -13,9 +13,9 @@ enum class OperationType(val displayName: String, val category: String) {
     COMPRESS_PDF("Compress PDF", "Optimize"),
     REPAIR_PDF("Repair PDF", "Optimize"),
 
-    // Scanner & Image
-    SCAN_DOCUMENT("Scan Document", "Scanner"),
-    IMAGE_TO_PDF("Image to PDF", "Scanner"),
+    // Document Processing & Image
+    DOCUMENT_IMPORT("Import Document", "Document"),
+    IMAGE_TO_PDF("Image to PDF", "Convert"),
     PERSPECTIVE_CROP("Perspective Crop", "Image"),
     IMAGE_ENHANCE("Enhance Image", "Image"),
 

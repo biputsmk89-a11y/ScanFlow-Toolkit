@@ -32,7 +32,8 @@ import java.util.Date
 import java.util.Locale
 
 class ConversionEngineImpl(
-    private val pdfRendererEngine: PdfRendererEngine
+    private val pdfRendererEngine: PdfRendererEngine,
+    private val ocrEngine: com.scanflow.app.engine.OcrEngine? = null
 ) : ConversionEngine {
 
     companion object {
@@ -284,8 +285,19 @@ class ConversionEngineImpl(
                 extractedText = stripper.getText(document)
             }
 
+            if (extractedText.isBlank() && ocrEngine != null) {
+                try {
+                    val ocrResult = ocrEngine.recognizePdf(inputFile)
+                    extractedText = ocrResult.fullText
+                } catch (e: Exception) {
+                    SafeLogger.w(TAG, "OCR fallback in pdfToText failed: ${e.message}")
+                }
+            }
+
+            val cleanedText = OcrTextCorrector.correctDocumentText(extractedText)
+
             FileOutputStream(outputFile).use { fos ->
-                fos.write(extractedText.toByteArray(Charsets.UTF_8))
+                fos.write(cleanedText.toByteArray(Charsets.UTF_8))
             }
 
             val duration = System.currentTimeMillis() - startTime

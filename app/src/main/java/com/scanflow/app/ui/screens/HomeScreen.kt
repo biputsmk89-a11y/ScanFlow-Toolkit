@@ -46,12 +46,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.CallMerge
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Compare
 import androidx.compose.material.icons.filled.Compress
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.DocumentScanner
+import androidx.compose.material.icons.filled.Transform
 import androidx.compose.material.icons.filled.DriveFolderUpload
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Mic
@@ -125,7 +125,6 @@ import java.io.File
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
-    onNavigateToScanner: () -> Unit,
     onNavigateToTool: (String) -> Unit,
     onNavigateToViewer: (String) -> Unit,
     onNavigateToAiChat: (String) -> Unit,
@@ -216,7 +215,6 @@ fun HomeScreen(
     ) {
         // App Header
         AppHeader(
-            title = "ScanFlow",
             subtitle = "Intelligence Toolkit",
             onProfileClick = onNavigateToSettings
         )
@@ -234,7 +232,7 @@ fun HomeScreen(
                     onVoiceSearchClick = {
                         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Search documents, tools, or smart OCR...")
+                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Search documents, conversion tools, or utilities...")
                         }
                         try {
                             speechRecognizerLauncher.launch(intent)
@@ -245,11 +243,15 @@ fun HomeScreen(
                 )
             }
 
-            // 2. Hero Bento Card: AI Camera Scanner & Auto Digitize (2x1 Span)
+            // 2. Hero Bento Card: Document Conversion Hub (2x1 Span)
             item {
-                BentoHeroScannerCard(
-                    onStartScan = onNavigateToScanner,
-                    onImagesToPdf = { onNavigateToTool("SF-101") }
+                BentoHeroConvertCard(
+                    onConvertToPdf = { onNavigateToTool("SF-094") },
+                    onPdfToImages = { onNavigateToTool("SF-096") },
+                    onQuickTool = { featureId -> onNavigateToTool(featureId) },
+                    onUploadFile = {
+                        importLauncher.launch(arrayOf("application/pdf", "image/*", "text/*"))
+                    }
                 )
             }
 
@@ -400,9 +402,21 @@ fun HomeScreen(
                             }
                         )
                         BentoCarouselChip(
+                            title = "Convert to PDF",
+                            icon = Icons.Default.Transform,
+                            iconTint = Color(0xFF6366F1),
+                            onClick = { onNavigateToTool("SF-094") }
+                        )
+                        BentoCarouselChip(
+                            title = "PDF to Images",
+                            icon = Icons.Default.PhotoLibrary,
+                            iconTint = Color(0xFF0284C7),
+                            onClick = { onNavigateToTool("SF-096") }
+                        )
+                        BentoCarouselChip(
                             title = "OCR Text",
                             icon = Icons.Default.TextFields,
-                            iconTint = Color(0xFF6366F1),
+                            iconTint = Color(0xFF8B5CF6),
                             onClick = { onNavigateToTool("SF-059") }
                         )
                         BentoCarouselChip(
@@ -530,11 +544,13 @@ fun HomeScreen(
             if (displayList.isEmpty()) {
                 item {
                     EmptyStateView(
-                        icon = Icons.Default.DocumentScanner,
+                        icon = Icons.Default.Transform,
                         title = if (searchQuery.isNotBlank()) "No Matching Documents" else "No Documents Yet",
-                        description = if (searchQuery.isNotBlank()) "Try refining your search keyword" else "Tap 'START SCAN' or 'Import Files' to build your local vault",
-                        actionButtonText = "Scan Document",
-                        onActionClick = onNavigateToScanner
+                        description = if (searchQuery.isNotBlank()) "Try refining your search keyword" else "Tap 'CONVERT NOW' or 'Import Files' to build your local vault",
+                        actionButtonText = "Import Files",
+                        onActionClick = {
+                            importLauncher.launch(arrayOf("application/pdf", "image/*", "text/*"))
+                        }
                     )
                 }
             } else {
@@ -564,7 +580,9 @@ fun HomeScreen(
         if (documentToRename != null) {
             AlertDialog(
                 onDismissRequest = { documentToRename = null },
+                shape = RoundedCornerShape(20.dp),
                 containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
                 title = { Text("Rename Document", fontWeight = FontWeight.Bold) },
                 text = {
                     Column {
@@ -610,7 +628,9 @@ fun HomeScreen(
         if (documentToDelete != null) {
             AlertDialog(
                 onDismissRequest = { documentToDelete = null },
+                shape = RoundedCornerShape(20.dp),
                 containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
                 title = { Text("Delete Document", fontWeight = FontWeight.Bold) },
                 text = {
                     Text(
@@ -642,7 +662,9 @@ fun HomeScreen(
         if (showFilterDialog) {
             AlertDialog(
                 onDismissRequest = { showFilterDialog = false },
+                shape = RoundedCornerShape(20.dp),
                 containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 6.dp,
                 title = { Text("Filter & Sort Vault", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -840,7 +862,7 @@ private fun ModernBentoSearchBar(
             onValueChange = onSearchQueryChange,
             placeholder = {
                 Text(
-                    "Search documents, tools, or smart OCR...",
+                    "Search documents or tools...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline,
                     maxLines = 1
@@ -913,36 +935,39 @@ private fun ModernBentoSearchBar(
 }
 
 /**
- * Bento Hero Scanner Card (2x1 Span).
- * Apple/Linear style with dynamic gradient, live pulse indicator, and glowing scanner art.
+ * Bento Hero Convert Card (2x1 Span).
+ * Apple/Linear style with dynamic gradient, live pulse indicator, and glowing convert art.
+ * Highlights the app's core identity as a document conversion powerhouse.
  */
 @Composable
-private fun BentoHeroScannerCard(
-    onStartScan: () -> Unit,
-    onImagesToPdf: () -> Unit,
+private fun BentoHeroConvertCard(
+    onConvertToPdf: () -> Unit,
+    onPdfToImages: () -> Unit,
+    onQuickTool: (String) -> Unit = {},
+    onUploadFile: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val gradientBrush = Brush.linearGradient(
         colors = listOf(
-            MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
+            Color(0xFF6366F1).copy(alpha = 0.14f),
             MaterialTheme.colorScheme.surfaceContainerLow,
-            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.08f)
+            Color(0xFF0EA5E9).copy(alpha = 0.10f)
         )
     )
 
     Card(
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)),
+        border = BorderStroke(1.dp, Color(0xFF6366F1).copy(alpha = 0.25f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .background(gradientBrush, RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(24.dp))
     ) {
         Column(
             modifier = Modifier
                 .background(gradientBrush)
-                .padding(20.dp)
+                .padding(18.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.Top,
@@ -950,108 +975,182 @@ private fun BentoHeroScannerCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    // Live AI Vision Badge with breathing dot
+                    // Badge Row with live breathing status
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f))
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(50))
-                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        PulsingStatusDot(color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "AI VISION ENGINE",
-                            style = MaterialTheme.typography.labelSmall,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFF6366F1).copy(alpha = 0.15f))
+                                .border(1.dp, Color(0xFF6366F1).copy(alpha = 0.30f), RoundedCornerShape(50))
+                                .padding(horizontal = 9.dp, vertical = 4.dp)
+                        ) {
+                            PulsingStatusDot(color = Color(0xFF6366F1))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "CONVERT ENGINE",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF6366F1)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .background(Color(0xFF10B981).copy(alpha = 0.12f))
+                                .border(1.dp, Color(0xFF10B981).copy(alpha = 0.25f), RoundedCornerShape(50))
+                                .padding(horizontal = 7.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "100% OFFLINE",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = Color(0xFF10B981)
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = "Scan New Document",
-                        style = MaterialTheme.typography.headlineSmall,
+                        text = "Convert Documents",
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(3.dp))
 
                     Text(
-                        text = "Auto-detect edges, perspective correction & instant offline OCR",
+                        text = "PDF ↔ Images, TXT, CSV, HTML — instant offline conversion",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2
                     )
                 }
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
-                // Modern Glowing Scanner Icon Container
+                // Modern Glowing Convert Icon Container
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .size(54.dp)
+                        .size(52.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+                        .background(Color(0xFF6366F1).copy(alpha = 0.12f))
+                        .border(1.dp, Color(0xFF6366F1).copy(alpha = 0.35f), RoundedCornerShape(16.dp))
                 ) {
                     Icon(
-                        imageVector = Icons.Default.DocumentScanner,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(30.dp)
+                        imageVector = Icons.Default.Transform,
+                        contentDescription = "Convert",
+                        tint = Color(0xFF6366F1),
+                        modifier = Modifier.size(28.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Action Buttons with Spring Press Feedback
+            // Action Buttons with Spring Press Feedback and zero text cutoff
             Row(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Button(
-                    onClick = onStartScan,
+                    onClick = onConvertToPdf,
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = Color(0xFF4F46E5),
+                        contentColor = Color.White
                     ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
                     modifier = Modifier
-                        .weight(1.3f)
-                        .height(50.dp)
-                        .bentoClickable(onClick = onStartScan)
+                        .weight(1.15f)
+                        .height(48.dp)
+                        .bentoClickable(onClick = onConvertToPdf)
                 ) {
-                    Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(19.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("START SCAN", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Icon(Icons.Default.DriveFolderUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "CONVERT NOW",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.5.sp,
+                        maxLines = 1
+                    )
                 }
 
                 Button(
-                    onClick = onImagesToPdf,
+                    onClick = onPdfToImages,
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                     modifier = Modifier
                         .weight(1f)
-                        .height(50.dp)
-                        .bentoClickable(onClick = onImagesToPdf)
+                        .height(48.dp)
+                        .bentoClickable(onClick = onPdfToImages)
                 ) {
                     Icon(Icons.Default.PhotoLibrary, contentDescription = null, modifier = Modifier.size(17.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Images to PDF", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1)
+                    Text(
+                        text = "PDF to Images",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp,
+                        maxLines = 1
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Format Quick Convert Micro-Chips Strip
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                ConvertFormatChip(label = "JPG → PDF", onClick = { onQuickTool("SF-094") })
+                ConvertFormatChip(label = "PDF → JPG", onClick = { onQuickTool("SF-096") })
+                ConvertFormatChip(label = "PDF → TXT", onClick = { onQuickTool("SF-098") })
+                ConvertFormatChip(label = "TXT → PDF", onClick = { onQuickTool("SF-099") })
+                ConvertFormatChip(label = "CSV → PDF", onClick = { onQuickTool("SF-100") })
+                ConvertFormatChip(label = "HTML → PDF", onClick = { onQuickTool("SF-105") })
+            }
         }
+    }
+}
+
+@Composable
+private fun ConvertFormatChip(
+    label: String,
+    onClick: () -> Unit
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.surface)
+            .border(0.75.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), RoundedCornerShape(50))
+            .bentoClickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

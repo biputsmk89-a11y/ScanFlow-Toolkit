@@ -90,4 +90,41 @@ class AiEngineTest {
         assertTrue("Translation should translate invoice to faktur or agreement to perjanjian",
             translated.contains("faktur", ignoreCase = true) || translated.contains("perjanjian", ignoreCase = true))
     }
+
+    @Test
+    fun testIndonesianDocumentIntelligence_summaryAndAsk() {
+        val arsipScan = """
+            arsiP o4a\ah catatan yang sitUisJi cetak atau JikPtik Dalam bentuw urup, angka atau QaMbor yong MeMPUna artl atau tuluan tertentu Sbogai bahan leoMUni kasi Jan LnfoMas yang eream Paa berbogai Mejia.
+            
+            2-${'$'}eLagai aat Pereantar tagi ogoniSas segai aict bwwti yang autenik Unik terpeeaya yAsos sentraisaci Asas Pesentausasi Acas gobun9an OtQu OHUnika i SPenciP taan arsif Pergarusan Aan Pergenian PengiRaon assir
+            
+            LYSebut kan 3 Alas eeRarsi pon Slutkan 3 Jaur itu warsilan?
+            
+            SSebutkan3 karauteristik ArsiP?
+        """.trimIndent()
+
+        // Test 1: Structured Summary
+        val summary = aiEngine.processTextSummary(arsipScan)
+        assertNotNull(summary)
+        assertTrue("Summary must have bullet points", summary.contains("•"))
+        assertTrue("Summary must contain cleaned concept of Arsip", summary.contains("Arsip adalah catatan", ignoreCase = true))
+        assertTrue("Summary must identify questions", summary.contains("Sebutkan 3", ignoreCase = true))
+
+        // Test 2: Q&A "Apa itu arsip?"
+        val pages = listOf(Pair(1, arsipScan))
+        val answerDef = aiEngine.processAsk(pages, "Apa itu arsip?")
+        assertNotNull(answerDef)
+        assertTrue("Answer must answer what Arsip is", answerDef.answer.contains("catatan", ignoreCase = true))
+        assertEquals(1, answerDef.citations.size)
+        assertEquals(1, answerDef.citations[0].pageNumber)
+
+        // Test 3: Q&A "Sebutkan asas kearsipan"
+        val answerAsas = aiEngine.processAsk(pages, "Sebutkan asas kearsipan")
+        assertNotNull(answerAsas)
+        assertTrue("Answer must find Asas sentralisasi", answerAsas.answer.contains("sentralisasi", ignoreCase = true))
+
+        // Test 4: Classification
+        val docType = aiEngine.processClassify(arsipScan)
+        assertEquals("Dokumen Kearsipan / Administrasi", docType)
+    }
 }

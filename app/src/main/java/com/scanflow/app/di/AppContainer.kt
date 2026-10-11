@@ -10,7 +10,6 @@ import com.scanflow.app.domain.repository.DocumentRepository
 import com.scanflow.app.domain.repository.OperationRepository
 import com.scanflow.app.domain.repository.WorkflowRepository
 import com.scanflow.app.domain.usecase.AiUseCases
-import com.scanflow.app.domain.usecase.ScannerUseCases
 import com.scanflow.app.engine.AiEngine
 import com.scanflow.app.engine.CompareEngine
 import com.scanflow.app.engine.CompressionEngine
@@ -20,7 +19,6 @@ import com.scanflow.app.engine.ImageProcessingEngine
 import com.scanflow.app.engine.OcrEngine
 import com.scanflow.app.engine.PdfEngine
 import com.scanflow.app.engine.PdfRendererEngine
-import com.scanflow.app.engine.ScannerEngine
 import com.scanflow.app.engine.SecurityEngine
 import com.scanflow.app.engine.StorageEngine
 import com.scanflow.app.engine.WorkflowEngine
@@ -33,7 +31,6 @@ import com.scanflow.app.engine.impl.ImageProcessingEngineImpl
 import com.scanflow.app.engine.impl.OcrEngineImpl
 import com.scanflow.app.engine.impl.PdfEngineImpl
 import com.scanflow.app.engine.impl.PdfRendererEngineImpl
-import com.scanflow.app.engine.impl.ScannerEngineImpl
 import com.scanflow.app.engine.impl.SecurityEngineImpl
 import com.scanflow.app.engine.impl.WorkflowEngineImpl
 
@@ -77,9 +74,7 @@ class AppContainer(val context: Context) {
         ImageProcessingEngineImpl()
     }
 
-    val scannerEngine: ScannerEngine by lazy {
-        ScannerEngineImpl(imageProcessingEngine, ocrEngine)
-    }
+
 
     val compressionEngine: CompressionEngine by lazy {
         CompressionEngineImpl()
@@ -102,7 +97,7 @@ class AppContainer(val context: Context) {
     }
 
     val conversionEngine: ConversionEngine by lazy {
-        ConversionEngineImpl(pdfRendererEngine)
+        ConversionEngineImpl(pdfRendererEngine, ocrEngine)
     }
 
     val workflowEngine: WorkflowEngine by lazy {
@@ -114,9 +109,7 @@ class AppContainer(val context: Context) {
     }
 
     // Domain Use Cases (Specialized)
-    val scannerUseCases: ScannerUseCases by lazy {
-        ScannerUseCases(scannerEngine, storageEngine, documentRepository, pdfEngine)
-    }
+
 
     val aiUseCases: AiUseCases by lazy {
         AiUseCases(aiEngine)

@@ -5,7 +5,7 @@ sealed class Screen(val route: String, val title: String) {
     object Documents : Screen("documents", "Documents")
     object Tools : Screen("tools", "Tools")
     object Settings : Screen("settings", "Settings")
-    object Scanner : Screen("scanner", "Scanner")
+
     object Viewer : Screen("viewer/{docId}", "Document Viewer") {
         fun createRoute(docId: String) = "viewer/$docId"
     }

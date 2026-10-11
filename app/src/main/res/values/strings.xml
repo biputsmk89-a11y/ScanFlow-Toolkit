@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">ScanFlow</string>
+    <string name="app_name">ScanFlow Convert Document</string>
     <string name="app_tagline">All-in-One Document Toolkit</string>
 
     <!-- Navigation -->
@@ -9,14 +9,14 @@
     <string name="nav_settings">Settings</string>
 
     <!-- Quick Actions -->
-    <string name="start_scan">START SCAN</string>
-    <string name="images_to_pdf">Images to PDF</string>
+    <string name="convert_now">CONVERT NOW</string>
+    <string name="pdf_to_images">PDF to Images</string>
     <string name="quick_tools">Quick Tools</string>
     <string name="offline_utilities">Offline Utilities</string>
     <string name="recent_documents">Recent Documents</string>
     <string name="see_all">See all</string>
     <string name="no_documents">No documents yet</string>
-    <string name="no_documents_desc">Scan or import PDF documents to begin.</string>
+    <string name="no_documents_desc">Convert or import PDF documents to begin.</string>
 
     <!-- Common Actions -->
     <string name="action_save">Save</string>
@@ -33,14 +33,6 @@
     <string name="air_gap_subtitle">Local processing • Zero telemetry • 100% Private</string>
     <string name="local_storage">Local Storage</string>
     <string name="native_offline">Native Offline</string>
-
-    <!-- Scanner -->
-    <string name="scanner_align_prompt">ALIGN DOCUMENT IN FRAME</string>
-    <string name="scanner_ready_prompt">DOCUMENT DETECTED • READY</string>
-    <string name="scanner_permission_title">Camera Access Required</string>
-    <string name="scanner_permission_desc">ScanFlow needs camera permission to capture and scan physical documents with real-time perspective correction.</string>
-    <string name="scanner_save_title">Save Scanned PDF</string>
-    <string name="scanner_save_desc">All pages will be compiled locally into a single standardized PDF document.</string>
 
     <!-- Viewer -->
     <string name="viewer_highlighter">Highlighter</string>

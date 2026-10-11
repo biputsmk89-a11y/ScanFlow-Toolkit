@@ -40,9 +40,38 @@ class OcrEngineImpl(
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     }
 
+    private fun enhanceBitmapForOcr(bitmap: Bitmap): Bitmap? {
+        return try {
+            val enhanced = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(enhanced)
+            // Color matrix: boost contrast (1.35x), reduce slight brightness (-15) for deep blacks and clean whites
+            val contrastMatrix = android.graphics.ColorMatrix(floatArrayOf(
+                1.35f, 0f, 0f, 0f, -15f,
+                0f, 1.35f, 0f, 0f, -15f,
+                0f, 0f, 1.35f, 0f, -15f,
+                0f, 0f, 0f, 1f, 0f
+            ))
+            val satMatrix = android.graphics.ColorMatrix().apply { setSaturation(0f) }
+            contrastMatrix.preConcat(satMatrix)
+            val paint = android.graphics.Paint().apply {
+                colorFilter = android.graphics.ColorMatrixColorFilter(contrastMatrix)
+                isFilterBitmap = true
+                isAntiAlias = true
+            }
+            canvas.drawBitmap(bitmap, 0f, 0f, paint)
+            enhanced
+        } catch (e: Throwable) {
+            null // Fallback to raw bitmap if memory or headless test
+        }
+    }
+
     override suspend fun recognizeImage(bitmap: Bitmap): OcrPageResult = withContext(Dispatchers.Default) {
+        var preprocessedBitmap: Bitmap? = null
         try {
-            val inputImage = InputImage.fromBitmap(bitmap, 0)
+            // Apply contrast and dynamic range optimization to remove shadows & paper grain
+            preprocessedBitmap = enhanceBitmapForOcr(bitmap)
+            val inputBitmap = preprocessedBitmap ?: bitmap
+            val inputImage = InputImage.fromBitmap(inputBitmap, 0)
             val visionText = Tasks.await(recognizer.process(inputImage))
 
             val blocks = visionText.textBlocks.mapNotNull { block ->
@@ -51,8 +80,9 @@ class OcrEngineImpl(
 
                 val ocrLines = block.lines.mapNotNull { line ->
                     val lineBox = line.boundingBox ?: return@mapNotNull null
+                    val cleanedLine = OcrTextCorrector.correctLine(line.text)
                     OcrLine(
-                        text = line.text,
+                        text = if (cleanedLine.isNotBlank()) cleanedLine else line.text,
                         boundingBox = RectF(
                             lineBox.left.toFloat(),
                             lineBox.top.toFloat(),
@@ -62,16 +92,19 @@ class OcrEngineImpl(
                     )
                 }
 
+                val cleanedBlockText = OcrTextCorrector.correctDocumentText(block.text)
                 OcrBlock(
-                    text = block.text,
+                    text = if (cleanedBlockText.isNotBlank()) cleanedBlockText else block.text,
                     boundingBox = rectF,
                     lines = ocrLines
                 )
             }
 
+            val cleanedFullText = OcrTextCorrector.correctDocumentText(visionText.text)
+
             OcrPageResult(
                 pageNumber = 1,
-                fullText = visionText.text,
+                fullText = if (cleanedFullText.isNotBlank()) cleanedFullText else visionText.text,
                 blocks = blocks,
                 renderWidth = bitmap.width,
                 renderHeight = bitmap.height
@@ -85,6 +118,10 @@ class OcrEngineImpl(
                 renderWidth = bitmap.width,
                 renderHeight = bitmap.height
             )
+        } finally {
+            if (preprocessedBitmap != null && preprocessedBitmap != bitmap) {
+                preprocessedBitmap.recycle()
+            }
         }
     }
 

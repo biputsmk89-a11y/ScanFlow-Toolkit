@@ -106,4 +106,21 @@ class DocumentsViewModel(
             documentRepository.createFolder(name)
         }
     }
+
+    fun importFile(file: java.io.File, mimeType: String = "application/pdf", pageCount: Int = 1) {
+        viewModelScope.launch {
+            val doc = Document(
+                id = java.util.UUID.randomUUID().toString(),
+                name = file.name,
+                uri = file.toURI().toString(),
+                path = file.absolutePath,
+                sizeBytes = file.length(),
+                pageCount = pageCount,
+                mimeType = mimeType,
+                createdAt = System.currentTimeMillis(),
+                modifiedAt = System.currentTimeMillis()
+            )
+            documentRepository.insertDocument(doc)
+        }
+    }
 }

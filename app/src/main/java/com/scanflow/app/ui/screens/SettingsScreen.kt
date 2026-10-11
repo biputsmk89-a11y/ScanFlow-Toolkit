@@ -1,10 +1,15 @@
 package com.scanflow.app.ui.screens
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ripple
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrightnessAuto
 import androidx.compose.material.icons.filled.CleaningServices
@@ -272,7 +279,7 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = "• 100% Offline-First: All PDF conversions, scans, OCR, watermarks, and encryption are processed locally on your device.\n" +
+                            text = "• 100% Offline-First: All document conversions, PDF operations, OCR, watermarks, and encryption are processed locally on your device.\n" +
                                     "• Zero Telemetry: Document text, passwords, and file contents are never transmitted or logged.\n" +
                                     "• 100% Free Forever: No subscriptions, no ads, no paywalls, no in-app purchases.",
                             style = MaterialTheme.typography.bodyMedium,
@@ -304,7 +311,7 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "ScanFlow Document Toolkit",
+                                    text = androidx.compose.ui.res.stringResource(id = R.string.app_name),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -343,27 +350,46 @@ private fun ThemeOptionRow(
     isSelected: Boolean,
     onSelect: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "themeOptionPressScale"
+    )
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(14.dp))
             .background(
-                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
                 else MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f)
             )
             .border(
                 width = if (isSelected) 1.5.dp else 1.dp,
                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(14.dp)
             )
-            .clickable { onSelect() }
-            .padding(12.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(bounded = true),
+                onClick = onSelect
+            )
+            .padding(14.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(36.dp)
+                .size(38.dp)
                 .clip(CircleShape)
                 .background(
                     if (isSelected) MaterialTheme.colorScheme.primary
@@ -374,7 +400,7 @@ private fun ThemeOptionRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -423,7 +449,8 @@ private fun StorageUsageRow(
         )
         Text(
             text = sizeText,
-            style = MaterialTheme.typography.bodyMedium,
+            style = com.scanflow.app.core.theme.MetricMono,
+            fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )

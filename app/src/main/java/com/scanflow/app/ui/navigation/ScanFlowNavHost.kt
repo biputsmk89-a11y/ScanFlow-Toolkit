@@ -23,14 +23,12 @@ import com.scanflow.app.ui.screens.CompareScreen
 import com.scanflow.app.ui.screens.DocumentViewerScreen
 import com.scanflow.app.ui.screens.DocumentsScreen
 import com.scanflow.app.ui.screens.HomeScreen
-import com.scanflow.app.ui.screens.ScannerScreen
 import com.scanflow.app.ui.screens.SettingsScreen
 import com.scanflow.app.ui.screens.ToolActionScreen
 import com.scanflow.app.ui.screens.ToolsScreen
 import com.scanflow.app.ui.viewmodel.AiViewModel
 import com.scanflow.app.ui.viewmodel.DocumentsViewModel
 import com.scanflow.app.ui.viewmodel.HomeViewModel
-import com.scanflow.app.ui.viewmodel.ScannerViewModel
 import com.scanflow.app.ui.viewmodel.ToolActionViewModel
 import com.scanflow.app.ui.viewmodel.ToolsViewModel
 import com.scanflow.app.ui.viewmodel.ViewerViewModel
@@ -93,7 +91,6 @@ fun ScanFlowNavHost() {
             composable(Screen.Home.route) {
                 HomeScreen(
                     viewModel = homeViewModel,
-                    onNavigateToScanner = { navController.navigate(Screen.Scanner.route) },
                     onNavigateToTool = { featureId -> navController.navigate(Screen.ToolAction.createRoute(featureId)) },
                     onNavigateToViewer = { docId -> navController.navigate(Screen.Viewer.createRoute(docId)) },
                     onNavigateToAiChat = { docId -> navController.navigate(Screen.AiChat.createRoute(docId)) },
@@ -117,7 +114,6 @@ fun ScanFlowNavHost() {
                 ToolsScreen(
                     viewModel = toolsViewModel,
                     onNavigateToTool = { featureId -> navController.navigate(Screen.ToolAction.createRoute(featureId)) },
-                    onNavigateToScanner = { navController.navigate(Screen.Scanner.route) },
                     onNavigateToCompare = { navController.navigate(Screen.Compare.route) },
                     onNavigateToSettings = { navController.navigate(Screen.Settings.route) }
                 )
@@ -133,17 +129,7 @@ fun ScanFlowNavHost() {
                 )
             }
 
-            composable(Screen.Scanner.route) {
-                val scannerViewModel: ScannerViewModel = viewModel { ScannerViewModel(container) }
-                ScannerScreen(
-                    viewModel = scannerViewModel,
-                    onNavigateBack = { navController.popBackStack() },
-                    onDocumentCreated = { filePath ->
-                        navController.popBackStack()
-                        // navigate back to home/documents
-                    }
-                )
-            }
+
 
             composable(
                 route = Screen.Viewer.route,

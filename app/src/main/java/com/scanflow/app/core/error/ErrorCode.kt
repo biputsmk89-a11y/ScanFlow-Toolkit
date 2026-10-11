@@ -12,7 +12,7 @@ enum class ErrorCode(val userMessage: String) {
     INVALID_PASSWORD("The password provided is incorrect."),
     UNSUPPORTED_FORMAT("The format of this document is currently unsupported."),
     STORAGE_ERROR("A storage read or write error occurred."),
-    PERMISSION_DENIED("Required storage or camera permission was denied."),
+    PERMISSION_DENIED("Required storage permission was denied."),
     MEMORY_ERROR("Insufficient memory to complete this operation. Try with a smaller file."),
     OCR_FAILED("Text recognition failed to process this document."),
     COMPRESSION_FAILED("Document compression failed."),

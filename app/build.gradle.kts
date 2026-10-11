@@ -10,11 +10,15 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.scanflow.app"
+        applicationId = "com.scanflow.convertdocument"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.3.1"
+
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
+        }
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -109,17 +113,8 @@ dependencies {
     // DataStore (Settings & Preferences)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    // CameraX (Document Scanner)
-    val cameraXVersion = "1.4.2"
-    implementation("androidx.camera:camera-camera2:$cameraXVersion")
-    implementation("androidx.camera:camera-lifecycle:$cameraXVersion")
-    implementation("androidx.camera:camera-view:$cameraXVersion")
-    implementation("androidx.camera:camera-extensions:$cameraXVersion")
-    implementation("com.google.guava:guava:33.4.0-android")
-
-    // Computer Vision & Edge Detection
+    // Computer Vision (Image Deskew & Perspective Correction for uploaded docs)
     implementation("org.opencv:opencv:4.10.0")
-
     // ML Kit Text Recognition (On-Device, Offline, Free)
     implementation("com.google.mlkit:text-recognition:16.0.1")
 

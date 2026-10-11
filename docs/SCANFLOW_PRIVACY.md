@@ -48,4 +48,4 @@ Network is used **STRICTLY AND SOLELY** if:
 
 - **Immediate Cache Wipe**: A single tap on "Clear Cache" in Settings wipes all temporary files, cached thumbnails, and processing scratchpads.
 - **Clear AI History**: Users can wipe all saved RAG chat sessions at any time.
-- **Complete Uninstall Wipe**: Because ScanFlow stores its database in Android scoped app-private directories (`/data/user/0/com.scanflow.app/`), uninstalling the application completely erases all database records and internal caches from the device.
+- **Complete Uninstall Wipe**: Because ScanFlow stores its database in Android scoped app-private directories (`/data/user/0/com.scanflow.convertdocument/`), uninstalling the application completely erases all database records and internal caches from the device.

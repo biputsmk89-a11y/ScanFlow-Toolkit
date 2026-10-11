@@ -37,12 +37,15 @@ import androidx.compose.ui.unit.sp
 import com.scanflow.app.R
 
 
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+
 /**
  * Top App Header matching Google Stitch project specifications.
  */
 @Composable
 fun AppHeader(
-    title: String = "ScanFlow",
+    title: String = stringResource(id = R.string.app_name),
     subtitle: String = "Home",
     onProfileClick: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -82,7 +85,10 @@ fun AppHeader(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     // Offline badge matching Stitch
@@ -153,6 +159,9 @@ fun AppHeader(
     if (showOfflineInfo) {
         AlertDialog(
             onDismissRequest = { showOfflineInfo = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
             title = {
                 Text(
                     text = "100% On-Device & Private",
@@ -161,12 +170,12 @@ fun AppHeader(
             },
             text = {
                 Text(
-                    text = "ScanFlow operates entirely offline. Your documents, scans, passwords, and OCR texts are processed on-device and never uploaded to any cloud server."
+                    text = "ScanFlow operates entirely offline. Your documents, conversions, passwords, and OCR texts are processed locally on-device and never uploaded to any cloud server."
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showOfflineInfo = false }) {
-                    Text("OK", color = MaterialTheme.colorScheme.primary)
+                    Text("Got It", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                 }
             }
         )

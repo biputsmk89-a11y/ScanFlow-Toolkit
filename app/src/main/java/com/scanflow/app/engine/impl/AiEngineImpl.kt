@@ -58,19 +58,71 @@ class AiEngineImpl(
 
     fun processTextSummary(text: String, maxBullets: Int = 5): String {
         if (text.isBlank()) return "Document contains no readable text."
+        val cleanedText = OcrTextCorrector.correctDocumentText(text)
 
-        // Split into sentences
-        val sentences = text.split(Regex("(?<=[.!?])\\s+"))
-            .map { it.trim().replace("\n", " ") }
-            .filter { it.length in 30..300 }
+        // Split into candidate lines / sentences
+        val rawSentences = cleanedText.split(Regex("(?<=[.!?])\\s+|\n+"))
+            .map { it.trim().replace(Regex("""\s+"""), " ") }
+            .filter { it.length in 15..350 && !it.startsWith("--- Page") }
 
-        if (sentences.isEmpty()) return "Document has insufficient text for summarization."
+        if (rawSentences.isEmpty()) return "Document has insufficient text for summarization."
 
-        // Word frequency ranking
+        // Detect structured segments
+        val definitions = mutableListOf<String>()
+        val keyPoints = mutableListOf<String>()
+        val questions = mutableListOf<String>()
+        val generalBullets = mutableListOf<String>()
+
+        rawSentences.forEach { s ->
+            val lower = s.lowercase()
+            val cleanSentence = s.removePrefix("•").removePrefix("-").trim()
+            val bulletItem = "• $cleanSentence"
+
+            when {
+                // Questions / exercises
+                s.endsWith("?") || lower.startsWith("sebutkan") || lower.startsWith("jelaskan") || lower.startsWith("apa ") || lower.startsWith("bagaimana") -> {
+                    if (questions.size < 3 && !questions.contains(bulletItem)) {
+                        questions.add(bulletItem)
+                    }
+                }
+                // Definitions
+                (lower.contains(" adalah ") || lower.contains(" merupakan ") || lower.contains(" is defined as ") || lower.contains(" refers to ")) && !s.endsWith("?") -> {
+                    if (definitions.size < 2 && !definitions.contains(bulletItem)) {
+                        definitions.add(bulletItem)
+                    }
+                }
+                // Key Points / Numbered items / Principles
+                (s.matches(Regex("""^\d+[\.:\)].*""")) || lower.startsWith("sebagai ") || lower.contains("asas ") || lower.contains("karakteristik ") || lower.contains("fungsi ")) && !s.endsWith("?") -> {
+                    if (keyPoints.size < 4 && !keyPoints.contains(bulletItem)) {
+                        keyPoints.add(bulletItem)
+                    }
+                }
+                else -> {
+                    generalBullets.add(bulletItem)
+                }
+            }
+        }
+
+        // If structured items were identified, construct an executive summary
+        if (definitions.isNotEmpty() || keyPoints.isNotEmpty() || questions.isNotEmpty()) {
+            val sections = mutableListOf<String>()
+            if (definitions.isNotEmpty()) {
+                sections.add("📌 Definisi / Konsep Utama:\n" + definitions.joinToString("\n"))
+            }
+            if (keyPoints.isNotEmpty()) {
+                sections.add("🔑 Poin Kunci & Karakteristik:\n" + keyPoints.joinToString("\n"))
+            }
+            if (questions.isNotEmpty()) {
+                sections.add("📝 Pertanyaan & Evaluasi Dokumen:\n" + questions.joinToString("\n"))
+            }
+            return sections.joinToString("\n\n")
+        }
+
+        // Standard frequency-based summarizer fallback
         val wordFreq = mutableMapOf<String, Int>()
         val stopWords = setOf("the", "and", "or", "to", "a", "in", "that", "is", "was", "for", "on", "with", "as", "by", "at", "an", "be", "this", "which", "from", "dan", "yang", "di", "ke", "dari", "ini", "itu", "untuk", "pada", "adalah")
 
-        sentences.forEach { sentence ->
+        rawSentences.forEach { sentence ->
             sentence.lowercase().split(Regex("[^a-zA-Z0-9]+")).forEach { word ->
                 if (word.length > 3 && word !in stopWords) {
                     wordFreq[word] = (wordFreq[word] ?: 0) + 1
@@ -78,8 +130,7 @@ class AiEngineImpl(
             }
         }
 
-        // Score sentences by word frequency
-        val scoredSentences = sentences.map { sentence ->
+        val scoredSentences = rawSentences.map { sentence ->
             var score = 0
             sentence.lowercase().split(Regex("[^a-zA-Z0-9]+")).forEach { word ->
                 score += wordFreq[word] ?: 0
@@ -90,7 +141,7 @@ class AiEngineImpl(
         val topSentences = scoredSentences
             .sortedByDescending { it.second }
             .take(maxBullets)
-            .map { "• ${it.first}" }
+            .map { "• ${it.first.removePrefix("•").removePrefix("-").trim()}" }
 
         return topSentences.joinToString("\n\n")
     }
@@ -104,58 +155,132 @@ class AiEngineImpl(
             )
         }
 
-        val queryTerms = question.lowercase().split(Regex("[^a-zA-Z0-9]+")).filter { it.length > 2 }.toSet()
+        val cleanedQuestion = OcrTextCorrector.correctLine(question)
+        val qLower = cleanedQuestion.lowercase()
 
-        // Score each page
-        val scoredPages = pagesText.map { (pageNum, pageText) ->
-            val paragraphs = pageText.split("\n\n").filter { it.isNotBlank() }
-            var bestParagraph = ""
-            var bestScore = 0
+        // Extract query terms (filter out question stopwords)
+        val questionStopWords = setOf(
+            "apa", "itu", "yang", "dimaksud", "dengan", "bagaimana", "mengapa", "kenapa", "sebutkan", "jelaskan",
+            "tuliskan", "berapa", "adakah", "apakah", "pada", "dari", "dalam", "untuk",
+            "what", "is", "the", "are", "how", "why", "when", "where", "which", "does", "can", "tell", "about"
+        )
+        val queryTerms = qLower.split(Regex("[^a-zA-Z0-9]+"))
+            .filter { it.length > 2 && it !in questionStopWords }
+            .toSet()
 
-            paragraphs.forEach { paragraph ->
-                val words = paragraph.lowercase().split(Regex("[^a-zA-Z0-9]+")).toSet()
-                val overlap = words.intersect(queryTerms).size
-                if (overlap > bestScore) {
-                    bestScore = overlap
-                    bestParagraph = paragraph.trim().replace("\n", " ")
-                }
-            }
-
-            Triple(pageNum, bestScore, bestParagraph)
+        val effectiveQueryTerms = if (queryTerms.isEmpty()) {
+            qLower.split(Regex("[^a-zA-Z0-9]+")).filter { it.length > 1 }.toSet()
+        } else {
+            queryTerms
         }
 
-        val topMatch = scoredPages.maxByOrNull { it.second }
+        var bestPageNumber = 1
+        var bestParagraph = ""
+        var bestScore = 0
 
-        return if (topMatch != null && topMatch.second > 0) {
-            val snippet = topMatch.third.take(250)
-            val citation = AiCitation(pageNumber = topMatch.first, snippet = snippet)
+        pagesText.forEach { (pageNum, rawPageText) ->
+            val pageText = OcrTextCorrector.correctDocumentText(rawPageText)
+            val paragraphs = pageText.split("\n\n").filter { it.isNotBlank() }
+
+            paragraphs.forEach { paragraph ->
+                val pLower = paragraph.lowercase()
+                val pWords = pLower.split(Regex("[^a-zA-Z0-9]+")).toSet()
+
+                var score = 0
+                // Exact term matches
+                score += pWords.intersect(effectiveQueryTerms).size * 4
+
+                // Fuzzy matches (Levenshtein <= 1 or prefix match)
+                effectiveQueryTerms.forEach { qTerm ->
+                    if (pWords.none { it == qTerm }) {
+                        if (pWords.any { it.startsWith(qTerm) || qTerm.startsWith(it) || OcrTextCorrector.levenshteinDistance(it, qTerm) <= 1 }) {
+                            score += 2
+                        }
+                    }
+                }
+
+                // Intent matching bonus
+                if ((qLower.contains("apa") || qLower.contains("definisi") || qLower.contains("what is")) &&
+                    (pLower.contains("adalah") || pLower.contains("merupakan") || pLower.contains("refers to") || pLower.contains("is defined as"))) {
+                    score += 6
+                }
+                if (qLower.contains("asas")) {
+                    if (pLower.contains("asas")) score += 4
+                    if (pLower.contains("sentralisasi") || pLower.contains("desentralisasi") || pLower.contains("gabungan")) {
+                        score += 8
+                    }
+                }
+                if (qLower.contains("karakteristik") && (pLower.contains("karakteristik") || pLower.contains("autentik") || pLower.contains("unik"))) {
+                    score += 6
+                }
+                // Root word match: kearsipan / pengarsipan -> arsip
+                if ((qLower.contains("kearsipan") || qLower.contains("arsip")) && (pLower.contains("arsip") || pLower.contains("pengarsipan"))) {
+                    score += 4
+                }
+
+                // If paragraph is merely an exercise question ending in '?' or starting with 'sebutkan', penalize so informative content is preferred
+                if ((paragraph.trim().endsWith("?") || pLower.startsWith("sebutkan") || pLower.startsWith("• sebutkan")) &&
+                    !qLower.contains("pertanyaan") && !qLower.contains("soal")) {
+                    score -= 8
+                }
+
+                if (score > bestScore) {
+                    bestScore = score
+                    bestParagraph = paragraph.trim().replace("\n", " ")
+                    bestPageNumber = pageNum
+                }
+            }
+        }
+
+        return if (bestScore > 0 && bestParagraph.isNotBlank()) {
+            val snippet = bestParagraph.take(350)
+            val citation = AiCitation(pageNumber = bestPageNumber, snippet = snippet)
+
+            val synthesizedAnswer = if (isIndonesianQuery(question)) {
+                "Berdasarkan dokumen (Halaman $bestPageNumber):\n\"$snippet...\""
+            } else {
+                "Based on page $bestPageNumber: \"$snippet...\""
+            }
+
             AiAnswer(
                 question = question,
-                answer = "Based on page ${topMatch.first}: \"$snippet...\"",
+                answer = synthesizedAnswer,
                 citations = listOf(citation),
                 isLocalProcessing = true
             )
         } else {
+            val notFoundAnswer = if (isIndonesianQuery(question)) {
+                "Dokumen tidak memuat informasi yang spesifik untuk menjawab: \"$question\"."
+            } else {
+                "The document does not appear to contain relevant sections answering: \"$question\"."
+            }
             AiAnswer(
                 question = question,
-                answer = "The document does not appear to contain relevant sections answering: \"$question\".",
+                answer = notFoundAnswer,
                 citations = emptyList(),
                 isLocalProcessing = true
             )
         }
     }
 
+    private fun isIndonesianQuery(query: String): Boolean {
+        val idWords = setOf("apa", "siapa", "bagaimana", "mengapa", "sebutkan", "jelaskan", "apakah", "arsip", "adalah")
+        val lower = query.lowercase()
+        return idWords.any { lower.contains(it) }
+    }
+
     fun processDocumentInsights(text: String, titleFallback: String): AiDocumentInsight {
-        val words = text.split(Regex("\\s+")).filter { it.isNotBlank() }
+        val cleanedText = OcrTextCorrector.correctDocumentText(text)
+        val words = cleanedText.split(Regex("\\s+")).filter { it.isNotBlank() }
         val wordCount = words.size
         val readingTime = max(1, (wordCount / 200))
-        val classification = processClassify(text)
+        val classification = processClassify(cleanedText)
 
         return AiDocumentInsight(
             title = titleFallback.replace("_", " ").capitalizeWords(),
             wordCount = wordCount,
             estimatedReadingTimeMinutes = readingTime,
-            detectedLanguage = detectLanguage(text),
+            detectedLanguage = detectLanguage(cleanedText),
             detectedDocumentType = classification,
             keyTopics = extractKeyTopics(words)
         )
@@ -170,6 +295,8 @@ class AiEngineImpl(
             lower.contains("resume") || lower.contains("curriculum vitae") || lower.contains("riwayat hidup") -> "Resume / CV"
             lower.contains("report") || lower.contains("laporan") || lower.contains("executive summary") -> "Business Report"
             lower.contains("certificate") || lower.contains("sertifikat") || lower.contains("ijazah") -> "Certificate / Diploma"
+            lower.contains("arsip") || lower.contains("kearsipan") || lower.contains("pengarsipan") || lower.contains("tata naskah") -> "Dokumen Kearsipan / Administrasi"
+            lower.contains("sebutkan") || lower.contains("jelaskan") || lower.contains("ujian") || lower.contains("soal") -> "Materi Pembelajaran / Ujian"
             else -> "General Document"
         }
     }

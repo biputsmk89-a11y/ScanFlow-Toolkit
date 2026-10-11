@@ -161,7 +161,7 @@ fun DocumentItem(
                         .align(Alignment.BottomStart)
                         .padding(3.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(Color(0xD90F172A))
+                        .background(getDocumentBadgeColor(document))
                         .padding(horizontal = 4.dp, vertical = 1.dp)
                 ) {
                     Text(
@@ -262,26 +262,30 @@ fun DocumentItem(
 
                     DropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                        onDismissRequest = { showMenu = false },
+                        shape = RoundedCornerShape(16.dp),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        shadowElevation = 8.dp
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Share") },
-                            leadingIcon = { Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp)) },
+                            text = { Text("Share", fontWeight = FontWeight.Medium) },
+                            leadingIcon = { Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
                             onClick = {
                                 showMenu = false
                                 onShare()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Rename") },
-                            leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp)) },
+                            text = { Text("Rename", fontWeight = FontWeight.Medium) },
+                            leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp)) },
                             onClick = {
                                 showMenu = false
                                 onRename()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            text = { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium) },
                             leadingIcon = {
                                 Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                             },
@@ -325,6 +329,17 @@ fun DocumentGridItem(
         }
     }
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "gridItemPressScale"
+    )
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -332,7 +347,15 @@ fun DocumentGridItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = ripple(bounded = true),
+                onClick = onClick
+            )
     ) {
         Column(modifier = Modifier.padding(10.dp)) {
             val gridThumbFile = remember(document.thumbnailPath, document.path) {
@@ -375,7 +398,7 @@ fun DocumentGridItem(
                         .align(Alignment.BottomStart)
                         .padding(6.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color(0xD90F172A))
+                        .background(getDocumentBadgeColor(document))
                         .padding(horizontal = 5.dp, vertical = 2.dp)
                 ) {
                     Text(
@@ -475,26 +498,30 @@ fun DocumentGridItem(
 
                     DropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
+                        onDismissRequest = { showMenu = false },
+                        shape = RoundedCornerShape(16.dp),
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
+                        shadowElevation = 8.dp
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Share") },
-                            leadingIcon = { Icon(Icons.Default.Share, null, modifier = Modifier.size(16.dp)) },
+                            text = { Text("Share", fontWeight = FontWeight.Medium) },
+                            leadingIcon = { Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 showMenu = false
                                 onShare()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Rename") },
-                            leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp)) },
+                            text = { Text("Rename", fontWeight = FontWeight.Medium) },
+                            leadingIcon = { Icon(Icons.Default.Edit, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp)) },
                             onClick = {
                                 showMenu = false
                                 onRename()
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                            text = { Text("Delete", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Medium) },
                             leadingIcon = {
                                 Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                             },
@@ -507,6 +534,18 @@ fun DocumentGridItem(
                 }
             }
         }
+    }
+}
+
+private fun getDocumentBadgeColor(document: Document): Color {
+    val ext = document.name.substringAfterLast('.', "").lowercase(Locale.ROOT)
+    return when {
+        ext == "pdf" || document.mimeType.contains("pdf", ignoreCase = true) -> Color(0xFFDC2626) // Crimson Red
+        ext in listOf("jpg", "jpeg", "png", "webp", "gif") || document.mimeType.contains("image", ignoreCase = true) -> Color(0xFF0284C7) // Sky Blue
+        ext in listOf("txt", "csv") || document.mimeType.contains("text", ignoreCase = true) -> Color(0xFF059669) // Emerald
+        ext in listOf("doc", "docx") || document.mimeType.contains("word", ignoreCase = true) -> Color(0xFF4F46E5) // Indigo
+        ext in listOf("xls", "xlsx") || document.mimeType.contains("sheet", ignoreCase = true) || document.mimeType.contains("excel", ignoreCase = true) -> Color(0xFF16A34A) // Green
+        else -> Color(0xFF475569) // Slate
     }
 }
 
@@ -538,4 +577,5 @@ private fun getDocumentIcon(document: Document) = when {
 
     else -> Icons.Default.Description
 }
+
 

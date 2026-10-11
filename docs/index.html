@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ScanFlow — All-in-One Document Toolkit</title>
-  <meta name="description" content="100% Offline & Private All-in-One Document Toolkit for Android. Fast AI camera scanner, 31 PDF utilities, OCR, and on-device intelligence.">
-  <link rel="icon" type="image/png" href="../playstore_icon.png">
+  <title>ScanFlow Convert Document — All-in-One Offline Toolkit</title>
+  <meta name="description" content="100% Offline & Private Document Converter for Android. High-precision document conversion, 31+ PDF utilities, offline OCR text repair, and on-device AI intelligence.">
+  <link rel="icon" type="image/png" href="assets/01_app_icon_512x512.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -115,7 +115,7 @@
     }
 
     .hero {
-      padding: 80px 0 60px;
+      padding: 80px 0 50px;
       text-align: center;
     }
 
@@ -149,7 +149,7 @@
     }
 
     h1 {
-      font-size: 52px;
+      font-size: 50px;
       font-weight: 800;
       letter-spacing: -1.5px;
       line-height: 1.15;
@@ -165,7 +165,7 @@
     .hero-desc {
       font-size: 18px;
       color: var(--text-muted);
-      max-width: 680px;
+      max-width: 700px;
       margin: 0 auto 36px;
     }
 
@@ -208,6 +208,61 @@
     .btn-secondary:hover {
       background: rgba(255, 255, 255, 0.1);
       transform: translateY(-2px);
+    }
+
+    /* Feature Banner */
+    .banner-container {
+      margin: 40px auto 20px;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--surface-border);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .banner-img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Screenshots Gallery */
+    .screenshots-section {
+      padding: 50px 0 30px;
+    }
+
+    .screenshots-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    .screenshot-card {
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      transition: transform 0.25s ease;
+      text-align: center;
+    }
+
+    .screenshot-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(59, 130, 246, 0.4);
+    }
+
+    .screenshot-card img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .screenshot-label {
+      padding: 16px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
     }
 
     /* Bento Grid */
@@ -329,14 +384,14 @@
     }
 
     @media (max-width: 860px) {
-      .bento-grid {
+      .bento-grid, .screenshots-grid {
         grid-template-columns: 1fr;
       }
       .span-2 {
         grid-column: span 1;
       }
       h1 {
-        font-size: 38px;
+        font-size: 36px;
       }
       .privacy-section {
         padding: 28px;
@@ -351,10 +406,11 @@
     <header>
       <a href="#" class="logo-brand">
         <div class="logo-badge">⚡</div>
-        <span class="brand-title">ScanFlow</span>
+        <span class="brand-title">ScanFlow Convert Document</span>
       </a>
       <nav class="nav-links">
         <a href="#features" class="nav-link">Features</a>
+        <a href="#screenshots" class="nav-link">Screenshots</a>
         <a href="#privacy" class="nav-link">Privacy Policy</a>
         <a href="https://github.com/biputsmk89-a11y/ScanFlow-Toolkit" class="nav-link" target="_blank">GitHub</a>
       </nav>
@@ -363,18 +419,46 @@
     <section class="hero">
       <div class="pill-badge">
         <span class="live-dot"></span>
-        100% OFFLINE & PRIVATE ARCHITECTURE
+        100% OFFLINE & PRIVATE ARCHITECTURE • V1.3.1
       </div>
-      <h1>All-in-One Document Toolkit<br><span>Powered by On-Device Intelligence</span></h1>
-      <p class="hero-desc">Scan, compress, merge, protect, sign, and organize documents instantly with zero cloud dependencies and zero data tracking.</p>
+      <h1>ScanFlow Convert Document<br><span>Universal Converter & On-Device Intelligence</span></h1>
+      <p class="hero-desc">Convert, compress, merge, protect, sign, and organize documents effortlessly with zero cloud dependencies, zero camera permissions, and total offline privacy.</p>
       
       <div class="cta-group">
         <a href="https://github.com/biputsmk89-a11y/ScanFlow-Toolkit/releases/latest" class="btn btn-primary" id="downloadBtn">
-          <span>⬇</span> Download APK (v1.3.0)
+          <span>⬇</span> Download APK (v1.3.1)
         </a>
         <a href="#privacy" class="btn btn-secondary">
           Privacy Policy
         </a>
+      </div>
+
+      <!-- Feature Banner Graphic -->
+      <div class="banner-container">
+        <img src="assets/02_feature_graphic_1024x500.jpg" alt="ScanFlow Feature Graphic" class="banner-img">
+      </div>
+    </section>
+
+    <!-- Visual Screenshots Section -->
+    <section class="screenshots-section" id="screenshots">
+      <div class="section-header">
+        <h2 class="section-title">Verified App Interface</h2>
+        <p style="color: var(--text-muted);">Crafted with modern Material 3 design, dynamic spring physics, and intuitive document actions.</p>
+      </div>
+
+      <div class="screenshots-grid">
+        <div class="screenshot-card">
+          <img src="assets/03_screenshot_1_dashboard.jpg" alt="Dashboard Screen">
+          <div class="screenshot-label">Bento Document Dashboard</div>
+        </div>
+        <div class="screenshot-card">
+          <img src="assets/04_screenshot_2_converter.jpg" alt="Document Converter Screen">
+          <div class="screenshot-label">Universal Document Converter</div>
+        </div>
+        <div class="screenshot-card">
+          <img src="assets/05_screenshot_3_ask_ai.jpg" alt="Ask AI Document Screen">
+          <div class="screenshot-label">Ask Document AI & Insights</div>
+        </div>
       </div>
     </section>
 
@@ -386,27 +470,27 @@
 
       <div class="bento-grid">
         <div class="bento-card span-2">
-          <div class="card-icon icon-blue">📷</div>
-          <h3 class="card-title">AI Camera Document Scanner</h3>
-          <p class="card-desc">Real-time edge detection and perspective warping powered by OpenCV. Auto-flattens angled pages, removes noise, and compiles high-definition 300 DPI A4 PDFs with instant searchable text.</p>
+          <div class="card-icon icon-blue">🔄</div>
+          <h3 class="card-title">Universal Document Converter</h3>
+          <p class="card-desc">Upload and convert between PDF, Images (JPG, PNG), Word, HTML, CSV, and Text files with automatic page orientation, custom margin controls, and high-definition 300 DPI print quality.</p>
         </div>
 
         <div class="bento-card">
           <div class="card-icon icon-violet">🧠</div>
-          <h3 class="card-title">On-Device AI Assistant</h3>
-          <p class="card-desc">Ask questions, extract tabular data, and summarize multi-page contracts using local extractive NLP with zero cloud data transmission.</p>
+          <h3 class="card-title">Ask Document AI & Insights</h3>
+          <p class="card-desc">Ask questions in plain English or Indonesian and get instant structured executive summaries with page citations, powered by local extractive NLP without internet.</p>
         </div>
 
         <div class="bento-card">
-          <div class="card-icon icon-emerald">⚡</div>
-          <h3 class="card-title">Smart PDF Compression</h3>
-          <p class="card-desc">Reduces file sizes by up to 70% using optimized JPEG downsampling and metadata stripping with built-in anti-bloat safeguards.</p>
+          <div class="card-icon icon-emerald">🔍</div>
+          <h3 class="card-title">OCR Text Correction Engine</h3>
+          <p class="card-desc">Offline ML Kit OCR reinforced with intelligent glyph normalization and dictionary repair. Auto-cleans noisy scans and connects split words with 95%+ precision.</p>
         </div>
 
         <div class="bento-card span-2">
           <div class="card-icon icon-amber">🛡️</div>
-          <h3 class="card-title">Security & Digital Signature Vault</h3>
-          <p class="card-desc">Encrypt sensitive PDFs using military-grade AES-128 / AES-256 standard encryption, set granular print/copy permissions, and place digital signatures offline.</p>
+          <h3 class="card-title">Smart PDF Utilities & Security Vault</h3>
+          <p class="card-desc">Compress PDFs by up to 70%, merge, split, watermark, reorder pages, and encrypt sensitive documents with AES-128 / AES-256 standard encryption and offline digital signatures.</p>
         </div>
       </div>
     </section>
@@ -414,25 +498,25 @@
     <!-- Google Play Compliant Privacy Policy Section -->
     <section class="privacy-section" id="privacy">
       <h2 class="privacy-title">Official Privacy Policy</h2>
-      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Effective Date: October 3, 2026 • Version 1.3.0</p>
+      <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 24px;">Effective Date: October 4, 2026 • Version 1.3.1</p>
       
       <div class="privacy-content">
-        <p><strong>ScanFlow — All-in-One Document Toolkit</strong> ("ScanFlow", "we", "our") is designed from the ground up as an <strong>offline-first, zero-knowledge application</strong>. We respect and protect the privacy of every user.</p>
+        <p><strong>ScanFlow Convert Document</strong> ("ScanFlow", "we", "our") is designed from the ground up as an <strong>offline-first, zero-knowledge application</strong>. We respect and protect the privacy of every user.</p>
 
         <ul class="privacy-list">
-          <li class="privacy-item"><span class="check-icon">✓</span> <strong>Zero Cloud Uploads:</strong> All camera capture, image processing, OCR, and PDF conversions happen strictly on your local device CPU.</li>
+          <li class="privacy-item"><span class="check-icon">✓</span> <strong>Zero Cloud Uploads:</strong> All document conversions, image processing, OCR, and AI insights happen strictly on your local device CPU.</li>
           <li class="privacy-item"><span class="check-icon">✓</span> <strong>No Telemetry or Tracking:</strong> We do not collect, transmit, share, or sell your personal data, files, or usage analytics.</li>
           <li class="privacy-item"><span class="check-icon">✓</span> <strong>No Third-Party Advertising SDKs:</strong> ScanFlow is 100% free of advertising trackers and third-party data brokers.</li>
-          <li class="privacy-item"><span class="check-icon">✓</span> <strong>Scoped Permissions:</strong> Camera access is used solely for live document scanning. Storage access is limited to files you explicitly import.</li>
+          <li class="privacy-item"><span class="check-icon">✓</span> <strong>No Camera or Invasive Permissions:</strong> ScanFlow operates purely on files you explicitly select via the standard Android document picker. No camera access or background location is requested.</li>
         </ul>
 
-        <p>Because no user data or document contents ever leave your physical device, we have no access to your files, passwords, or scanned records.</p>
+        <p>Because no user data or document contents ever leave your physical device, we have no access to your files, passwords, or converted records.</p>
         <p>For questions or open-source inquiries, visit our official repository on GitHub.</p>
       </div>
     </section>
 
     <footer>
-      <p>© 2026 ScanFlow Toolkit. Built with Jetpack Compose & Material 3. Open-source under MIT License.</p>
+      <p>© 2026 ScanFlow Convert Document. Built with Jetpack Compose & Material 3. Open-source under MIT License.</p>
     </footer>
   </div>
 </body>

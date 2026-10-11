@@ -3,7 +3,7 @@
 ## 1. Release Metadata
 
 - **Application Name**: ScanFlow — All-in-One Document Toolkit
-- **Package Identifier**: `com.scanflow.app`
+- **Package Identifier**: `com.scanflow.convertdocument`
 - **Version Name**: `1.0.0`
 - **Version Code**: `1`
 - **Target SDK**: Android 16 (API 36)
